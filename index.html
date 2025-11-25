@@ -1,0 +1,548 @@
+<!doctype html>
+<html lang="zh-Hant">
+<head>
+<meta charset="utf-8"/>
+<meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no,viewport-fit=cover"/>
+<meta name="theme-color" content="#000000">
+<meta name="description" content="專業超慢跑節拍器，支援語音鼓勵與精準節拍">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<title>超慢跑節拍器 Pro Max</title>
+<style>
+  :root { 
+    --bg: #050505; --card-bg: rgba(255, 255, 255, 0.08); 
+    --primary: #4ea1ff; --text: #f0f0f0; --muted: #888;
+    --safe-top: env(safe-area-inset-top, 20px);
+    --safe-bottom: env(safe-area-inset-bottom, 20px);
+    --font-sys: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+  }
+
+  * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; user-select: none; }
+  
+  body { 
+    margin: 0; padding: 0; 
+    font-family: var(--font-sys); 
+    background-color: var(--bg); 
+    color: var(--text);
+    height: 100vh; display: flex; flex-direction: column;
+    overflow: hidden; /* 防止滾動，適合單頁應用 */
+  }
+
+  /* 背景動態光暈 */
+  .ambient-light {
+    position: fixed; top: 0; left: 0; width: 100vw; height: 100vh;
+    background: radial-gradient(circle at 50% 30%, var(--primary-glow, #4ea1ff20), transparent 70%);
+    z-index: -1; transition: background 0.5s ease;
+  }
+
+  /* 主容器 */
+  .app-container {
+    flex: 1; display: flex; flex-direction: column;
+    padding: calc(var(--safe-top) + 16px) 20px calc(var(--safe-bottom) + 90px);
+    max-width: 600px; margin: 0 auto; width: 100%;
+    overflow-y: auto; /* 內容過長時可滾動 */
+  }
+
+  header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 24px; }
+  h1 { margin: 0; font-size: 24px; font-weight: 700; letter-spacing: -0.5px; }
+  .status-badge { 
+    font-size: 12px; padding: 4px 10px; border-radius: 20px; 
+    background: rgba(255,255,255,0.1); color: var(--muted); 
+    display: flex; align-items: center; gap: 6px;
+  }
+  .status-badge.active { background: var(--primary); color: #000; font-weight: 600; box-shadow: 0 0 10px var(--primary); }
+
+  /* 視覺舞台 (Visual Stage) */
+  .stage-wrapper {
+    position: relative; aspect-ratio: 16/9; width: 100%;
+    background: rgba(0,0,0,0.3); border-radius: 24px;
+    border: 1px solid rgba(255,255,255,0.1);
+    display: flex; align-items: center; justify-content: center;
+    margin-bottom: 24px; overflow: hidden;
+    cursor: pointer; transition: transform 0.2s;
+  }
+  .stage-wrapper:active { transform: scale(0.98); }
+
+  /* 呼吸圓環 */
+  .breathing-ring {
+    width: 120px; height: 120px; border-radius: 50%;
+    border: 4px solid var(--primary);
+    box-shadow: 0 0 30px var(--primary-glow, #4ea1ff40);
+    display: flex; align-items: center; justify-content: center;
+    font-size: 48px; font-weight: 800; font-variant-numeric: tabular-nums;
+    transition: all 0.1s cubic-bezier(0.4, 0, 0.2, 1);
+    position: relative;
+    background: rgba(0,0,0,0.2);
+  }
+  
+  /* 節拍擴散波紋 */
+  .ripple {
+    position: absolute; border-radius: 50%; border: 2px solid var(--primary);
+    width: 100%; height: 100%; opacity: 0; pointer-events: none;
+  }
+  .ripple.animate { animation: ripple-anim 0.6s ease-out; }
+  @keyframes ripple-anim {
+    0% { transform: scale(1); opacity: 0.8; stroke-width: 4px; }
+    100% { transform: scale(2.5); opacity: 0; stroke-width: 0px; }
+  }
+
+  /* BPM 控制區 */
+  .bpm-control {
+    display: flex; align-items: center; justify-content: space-between;
+    background: var(--card-bg); padding: 16px; border-radius: 20px;
+    margin-bottom: 24px; backdrop-filter: blur(10px);
+  }
+  .bpm-btn {
+    width: 48px; height: 48px; border-radius: 14px; border: none;
+    background: rgba(255,255,255,0.1); color: #fff; font-size: 24px;
+    cursor: pointer; display: flex; align-items: center; justify-content: center;
+  }
+  .bpm-btn:active { background: rgba(255,255,255,0.2); }
+  .current-bpm { text-align: center; }
+  .current-bpm .val { font-size: 36px; font-weight: 800; line-height: 1; display: block; }
+  .current-bpm .label { font-size: 12px; color: var(--muted); text-transform: uppercase; }
+
+  /* 預設卡片 Grid */
+  .grid { 
+    display: grid; grid-template-columns: repeat(auto-fit, minmax(80px, 1fr)); 
+    gap: 12px; margin-bottom: 24px;
+  }
+  .preset-card {
+    background: var(--card-bg); padding: 12px; border-radius: 16px;
+    text-align: center; cursor: pointer; border: 1px solid transparent;
+    transition: 0.2s;
+  }
+  .preset-card.active {
+    background: var(--primary); color: #000;
+    box-shadow: 0 4px 12px rgba(0,0,0,0.3);
+  }
+  .preset-card b { display: block; font-size: 20px; margin-bottom: 4px; }
+  .preset-card span { font-size: 11px; opacity: 0.8; }
+
+  /* 設定開關區 */
+  .settings {
+    display: flex; gap: 10px; overflow-x: auto; padding-bottom: 10px;
+  }
+  .toggle-btn {
+    flex: 1; padding: 12px; background: var(--card-bg); border-radius: 14px;
+    display: flex; align-items: center; justify-content: center; gap: 8px;
+    font-size: 13px; color: var(--muted); cursor: pointer;
+    min-width: 100px; border: 1px solid transparent;
+  }
+  .toggle-btn.active { 
+    border-color: var(--primary); color: #fff; background: rgba(78, 161, 255, 0.1); 
+  }
+  .icon-dot { width: 8px; height: 8px; border-radius: 50%; background: #555; }
+  .toggle-btn.active .icon-dot { background: var(--primary); box-shadow: 0 0 5px var(--primary); }
+
+  /* 底部固定控制欄 */
+  .bottom-bar {
+    position: fixed; bottom: 0; left: 0; right: 0;
+    background: rgba(10, 10, 10, 0.9);
+    backdrop-filter: blur(20px); -webkit-backdrop-filter: blur(20px);
+    padding: 16px 20px calc(var(--safe-bottom) + 16px);
+    display: flex; gap: 16px; border-top: 1px solid rgba(255,255,255,0.1);
+    z-index: 100;
+  }
+  .main-btn {
+    flex: 1; height: 56px; border: none; border-radius: 28px;
+    font-size: 18px; font-weight: 600; cursor: pointer;
+    display: flex; align-items: center; justify-content: center; gap: 8px;
+    transition: transform 0.1s; color: #fff;
+  }
+  .main-btn:active { transform: scale(0.96); }
+  .btn-start { background: var(--primary); color: #000; box-shadow: 0 4px 15px var(--primary-glow, rgba(78,161,255,0.4)); }
+  .btn-stop { background: #333; color: #ff4d4f; flex: 0.4; display: none; }
+  .btn-stop.visible { display: flex; }
+
+  /* 沉浸模式樣式 */
+  body.showcase .app-container > *:not(.stage-wrapper) { opacity: 0; pointer-events: none; }
+  body.showcase .bottom-bar { transform: translateY(150%); }
+  body.showcase .stage-wrapper {
+    position: fixed; top: 0; left: 0; width: 100vw; height: 100vh;
+    border-radius: 0; border: none; z-index: 200;
+    background: #000; margin: 0;
+  }
+  body.showcase .breathing-ring { width: 200px; height: 200px; font-size: 80px; border-width: 6px; }
+  .exit-showcase {
+    position: fixed; top: calc(var(--safe-top) + 20px); right: 20px;
+    padding: 8px 16px; background: rgba(255,255,255,0.2);
+    backdrop-filter: blur(4px); border-radius: 20px; color: #fff;
+    font-size: 13px; z-index: 201; display: none; cursor: pointer;
+  }
+  body.showcase .exit-showcase { display: block; }
+  
+  /* 語音選擇 */
+  .voice-select {
+    width: 100%; padding: 12px; margin-top: 10px; background: #000; color: #fff;
+    border: 1px solid #333; border-radius: 12px; font-size: 14px;
+  }
+</style>
+</head>
+<body>
+
+<div class="ambient-light" id="ambient"></div>
+
+<div class="app-container">
+  <header>
+    <h1>超慢跑 <span style="color:var(--primary)">Pro</span></h1>
+    <div class="status-badge" id="statusBadge">
+      <div class="icon-dot" style="width:6px;height:6px;background:currentColor"></div>
+      <span>就緒</span>
+    </div>
+  </header>
+
+  <div class="stage-wrapper" id="stage">
+    <div class="breathing-ring" id="ring">
+      <span id="beatNum">Go</span>
+      <div class="ripple" id="ripple"></div>
+    </div>
+    <div style="position:absolute; bottom:20px; font-size:12px; opacity:0.5">點擊進入專注模式</div>
+  </div>
+
+  <div class="bpm-control">
+    <button class="bpm-btn" onclick="App.adjustBpm(-1)">−</button>
+    <div class="current-bpm">
+      <span class="val" id="displayBpm">180</span>
+      <span class="label">BPM 步頻</span>
+    </div>
+    <button class="bpm-btn" onclick="App.adjustBpm(1)">+</button>
+  </div>
+
+  <div class="grid" id="presetGrid">
+    </div>
+
+  <div class="settings">
+    <div class="toggle-btn active" id="btn-tts" onclick="App.toggleFeature('tts')">
+      <div class="icon-dot"></div> 語音教練
+    </div>
+    <div class="toggle-btn" id="btn-vib" onclick="App.toggleFeature('vib')">
+      <div class="icon-dot"></div> 震動反饋
+    </div>
+  </div>
+  
+  <select id="voiceSelect" class="voice-select" style="display:none"></select>
+  <div style="text-align:center; font-size:12px; color:#555; margin-top:20px;">
+    建議佩戴耳機以獲得最佳體驗<br>每 60 秒會有語音鼓勵
+  </div>
+</div>
+
+<div class="bottom-bar">
+  <button class="main-btn btn-stop" id="btnStop" onclick="App.stop()">結束</button>
+  <button class="main-btn btn-start" id="btnStart" onclick="App.toggle()">
+    <span id="btnText">開始跑步</span>
+  </button>
+</div>
+
+<div class="exit-showcase" onclick="App.toggleShowcase(false)">退出專注模式 ✕</div>
+
+<script>
+const PRESETS = [
+  { bpm: 150, name: '恢復', color: '#4ea1ff', glow: '#4ea1ff' },
+  { bpm: 160, name: '熱身', color: '#1dd1a1', glow: '#1dd1a1' },
+  { bpm: 170, name: '燃脂', color: '#fbc531', glow: '#fbc531' },
+  { bpm: 180, name: '黃金', color: '#ff9f43', glow: '#ff9f43' },
+  { bpm: 190, name: '強化', color: '#ff6b6b', glow: '#ff6b6b' },
+];
+
+const PHRASES = [
+  "保持微笑，肩膀放鬆", "核心收緊，用臀部發力", "呼吸要順暢，不要憋氣", 
+  "腳步輕盈，像貓一樣落地", "很好，維持這個節奏", "加油，燃燒脂肪", 
+  "擺臂自然，視線看向遠方", "膝蓋保持微彎，保護關節"
+];
+
+const AudioEngine = {
+  ctx: null,
+  nextNoteTime: 0.0,
+  timerID: null,
+  lookahead: 25.0,
+  scheduleAheadTime: 0.1,
+  queue: [],
+  isPlaying: false,
+
+  init() {
+    if (!this.ctx) {
+      this.ctx = new (window.AudioContext || window.webkitAudioContext)();
+    }
+    if (this.ctx.state === 'suspended') {
+      this.ctx.resume();
+    }
+  },
+
+  // 播放高質感的木魚聲/節拍聲
+  playClick(time, beatCount) {
+    const osc = this.ctx.createOscillator();
+    const gain = this.ctx.createGain();
+    
+    // 強拍 (Beat 1) 音調較高，弱拍音調較低
+    const isStrong = beatCount % 4 === 0;
+    
+    // 使用 Triangle 波形，聽起來比較圓潤
+    osc.type = isStrong ? 'sine' : 'triangle';
+    osc.frequency.setValueAtTime(isStrong ? 1200 : 800, time);
+    osc.frequency.exponentialRampToValueAtTime(isStrong ? 600 : 400, time + 0.1);
+
+    // 聲音包絡 (Envelope)：短促有力
+    gain.gain.setValueAtTime(0, time);
+    gain.gain.linearRampToValueAtTime(isStrong ? 1.0 : 0.6, time + 0.005);
+    gain.gain.exponentialRampToValueAtTime(0.001, time + 0.1);
+
+    osc.connect(gain);
+    gain.connect(this.ctx.destination);
+
+    osc.start(time);
+    osc.stop(time + 0.1);
+  },
+
+  schedule() {
+    while (this.nextNoteTime < this.ctx.currentTime + this.scheduleAheadTime) {
+      // 安排聲音
+      this.playClick(this.nextNoteTime, App.beatCount);
+      // 安排視覺 (推入隊列，由 requestAnimationFrame 處理)
+      App.scheduleVisual(this.nextNoteTime, App.beatCount);
+      
+      const secondsPerBeat = 60.0 / App.bpm;
+      this.nextNoteTime += secondsPerBeat;
+      App.beatCount++;
+    }
+    this.timerID = setTimeout(() => this.schedule(), this.lookahead);
+  },
+
+  start() {
+    if (this.isPlaying) return;
+    this.init();
+    this.isPlaying = true;
+    this.nextNoteTime = this.ctx.currentTime + 0.1;
+    App.beatCount = 0;
+    this.schedule();
+  },
+
+  stop() {
+    this.isPlaying = false;
+    clearTimeout(this.timerID);
+  }
+};
+
+const TTS = {
+  enabled: true,
+  lastSpeakTime: 0,
+  interval: 60000, // 60秒
+  voices: [],
+
+  init() {
+    const load = () => {
+      this.voices = window.speechSynthesis.getVoices();
+      // 優先選擇 Google 中文 或 台灣口音
+      const zh = this.voices.filter(v => v.lang.includes('zh') || v.lang.includes('TW'));
+      // 填充隱藏的選單供調試
+      const select = document.getElementById('voiceSelect');
+      select.innerHTML = zh.map(v => `<option value="${v.name}">${v.name}</option>`).join('');
+    };
+    window.speechSynthesis.onvoiceschanged = load;
+    load();
+  },
+
+  speak(text) {
+    if (!this.enabled || !window.speechSynthesis) return;
+    window.speechSynthesis.cancel(); // 打斷之前的
+    const u = new SpeechSynthesisUtterance(text);
+    const preferred = this.voices.find(v => v.name.includes("Google") && v.lang.includes("TW")) || 
+                      this.voices.find(v => v.lang.includes("TW"));
+    if (preferred) u.voice = preferred;
+    u.rate = 1.1; // 稍微快一點，更有活力
+    u.pitch = 1.1;
+    window.speechSynthesis.speak(u);
+  },
+
+  checkAndSpeak(now) {
+    if (now - this.lastSpeakTime > this.interval && App.isRunning) {
+      const msg = PHRASES[Math.floor(Math.random() * PHRASES.length)];
+      this.speak(msg);
+      this.lastSpeakTime = now;
+    }
+  }
+};
+
+const WakeLock = {
+  sentinel: null,
+  async enable() {
+    if ('wakeLock' in navigator) {
+      try { this.sentinel = await navigator.wakeLock.request('screen'); } 
+      catch (e) { console.log('WakeLock failed', e); }
+    }
+  },
+  disable() {
+    if (this.sentinel) { this.sentinel.release(); this.sentinel = null; }
+  }
+};
+
+const App = {
+  bpm: 180,
+  isRunning: false,
+  beatCount: 0,
+  visualQueue: [],
+  features: { tts: true, vib: false },
+
+  init() {
+    this.renderPresets();
+    this.selectPreset(180); // Default
+    TTS.init();
+
+    // Event Listeners
+    document.getElementById('stage').addEventListener('click', () => {
+      if(this.isRunning) this.toggleShowcase(true);
+    });
+    
+    // Animation Loop
+    requestAnimationFrame(this.drawLoop.bind(this));
+  },
+
+  renderPresets() {
+    const grid = document.getElementById('presetGrid');
+    grid.innerHTML = PRESETS.map(p => `
+      <div class="preset-card" id="p-${p.bpm}" onclick="App.selectPreset(${p.bpm})">
+        <b>${p.bpm}</b>
+        <span>${p.name}</span>
+      </div>
+    `).join('');
+  },
+
+  selectPreset(bpm) {
+    this.bpm = bpm;
+    document.getElementById('displayBpm').textContent = bpm;
+    
+    // 更新樣式
+    document.querySelectorAll('.preset-card').forEach(el => el.classList.remove('active'));
+    const target = document.getElementById(`p-${bpm}`);
+    if(target) target.classList.add('active'); // Custom BPM 可能沒有對應卡片
+
+    // 更新主題色
+    const p = PRESETS.find(x => x.bpm === bpm) || PRESETS[3];
+    document.documentElement.style.setProperty('--primary', p.color);
+    document.documentElement.style.setProperty('--primary-glow', p.glow);
+    
+    if(this.isRunning) TTS.speak(`調整為 ${bpm}`);
+  },
+
+  adjustBpm(delta) {
+    let newBpm = this.bpm + delta;
+    if(newBpm < 30) newBpm = 30;
+    if(newBpm > 300) newBpm = 300;
+    
+    // 如果剛好對應到預設值，切換樣式，否則只改數字
+    const match = PRESETS.find(p => p.bpm === newBpm);
+    if(match) this.selectPreset(newBpm);
+    else {
+      this.bpm = newBpm;
+      document.getElementById('displayBpm').textContent = newBpm;
+      document.querySelectorAll('.preset-card').forEach(el => el.classList.remove('active'));
+    }
+  },
+
+  toggle() {
+    if (this.isRunning) {
+      this.pause();
+    } else {
+      AudioEngine.start();
+      WakeLock.enable();
+      this.isRunning = true;
+      document.getElementById('btnText').textContent = "暫停";
+      document.getElementById('btnStart').style.background = "#fff";
+      document.getElementById('btnStart').style.color = "#000";
+      document.getElementById('btnStop').classList.add('visible');
+      document.getElementById('statusBadge').classList.add('active');
+      document.getElementById('statusBadge').querySelector('span').textContent = "跑步中";
+      TTS.lastSpeakTime = Date.now();
+      TTS.speak("開始運動，請保持呼吸節奏");
+    }
+  },
+
+  pause() {
+    AudioEngine.stop();
+    this.isRunning = false;
+    document.getElementById('btnText').textContent = "繼續";
+    document.getElementById('btnStart').style.background = "var(--primary)";
+    document.getElementById('statusBadge').classList.remove('active');
+    document.getElementById('statusBadge').querySelector('span').textContent = "已暫停";
+  },
+
+  stop() {
+    this.pause();
+    document.getElementById('btnText').textContent = "開始跑步";
+    document.getElementById('btnStop').classList.remove('visible');
+    document.getElementById('beatNum').textContent = "Go";
+    document.getElementById('statusBadge').querySelector('span').textContent = "就緒";
+    this.beatCount = 0;
+    WakeLock.disable();
+    TTS.speak("運動結束，辛苦了");
+    this.toggleShowcase(false);
+  },
+
+  toggleFeature(key) {
+    this.features[key] = !this.features[key];
+    const btn = document.getElementById(key === 'tts' ? 'btn-tts' : 'btn-vib');
+    btn.classList.toggle('active', this.features[key]);
+    if(key === 'tts') TTS.enabled = this.features[key];
+  },
+
+  toggleShowcase(active) {
+    if(active) document.body.classList.add('showcase');
+    else document.body.classList.remove('showcase');
+  },
+
+  scheduleVisual(time, count) {
+    this.visualQueue.push({ time, count });
+  },
+
+  drawLoop() {
+    const drawTime = AudioEngine.ctx ? AudioEngine.ctx.currentTime : 0;
+    const now = Date.now();
+
+    // 處理視覺隊列
+    while(this.visualQueue.length && this.visualQueue[0].time <= drawTime) {
+      const event = this.visualQueue.shift();
+      this.triggerBeat(event.count);
+    }
+
+    // TTS 檢查
+    if(this.features.tts) TTS.checkAndSpeak(now);
+
+    requestAnimationFrame(this.drawLoop.bind(this));
+  },
+
+  triggerBeat(count) {
+    const isStrong = count % 4 === 0;
+    const ring = document.getElementById('ring');
+    const ripple = document.getElementById('ripple');
+    const beatNum = document.getElementById('beatNum');
+
+    // 數字跳動 1, 2, 3, 4
+    const step = (count % 4) + 1;
+    beatNum.textContent = step;
+
+    // 動畫效果
+    ring.style.transform = isStrong ? "scale(1.15)" : "scale(1.05)";
+    ring.style.borderColor = isStrong ? "#fff" : "var(--primary)";
+    
+    // 波紋重置
+    ripple.classList.remove('animate');
+    void ripple.offsetWidth; // Trigger reflow
+    ripple.classList.add('animate');
+
+    // 恢復
+    setTimeout(() => {
+      ring.style.transform = "scale(1)";
+      ring.style.borderColor = "var(--primary)";
+    }, 100);
+
+    // 震動
+    if (this.features.vib && navigator.vibrate) {
+      navigator.vibrate(isStrong ? 30 : 10);
+    }
+  }
+};
+
+App.init();
+</script>
+</body>
+</html>
