@@ -439,9 +439,12 @@
     }
 
     .stage-placeholder .placeholder-main {
-      font-size: 18px;
+      font-size: clamp(22px, 5.5vw, 48px);
       font-weight: 700;
       color: var(--text);
+      text-wrap: balance;
+      max-width: min(90%, 640px);
+      margin: 0 auto;
     }
 
     .stage-placeholder .placeholder-hint {
@@ -713,11 +716,15 @@
       display: flex;
       flex-direction: column;
       align-items: center;
+      width: 100%;
+      max-width: min(90%, 640px);
+      padding: 0 4vw;
+      margin: 0 auto;
     }
 
     .text-line {
-      line-height: 2.5;
-      font-size: 20px;
+      line-height: clamp(1.6, 1.2 + 1vw, 2.3);
+      font-size: clamp(26px, 6vw, 52px);
       text-align: center;
       padding: 8px 0;
       min-height: 60px;
@@ -725,6 +732,15 @@
       align-items: center;
       justify-content: center;
       transition: all 0.3s ease;
+      word-break: break-word;
+      text-wrap: balance;
+      hyphens: auto;
+    }
+
+    @supports not (text-wrap: balance) {
+      .text-line {
+        word-break: break-word;
+      }
     }
 
     .text-line.prev {
@@ -800,7 +816,7 @@
 
     <div class="stage-wrapper" id="stage">
       <div class="stage-content">
-        <div class="text-display hidden" id="textDisplay">
+        <div class="text-display hidden" id="textDisplay" style="top: -1px;">
           <div class="text-lines-container" id="textLinesContainer"></div>
         </div>
         <div class="stage-placeholder" id="placeholderMessage">
@@ -1490,46 +1506,31 @@
         }
         const text = TEXTS[this.currentText];
 
-        // 處理換行：保留原文章的換行，然後按約20字一行分割
+        // 以標點為優先換行，並控制每行最大字數
+        const MAX_CHARS = 22;
         this.textLines = [];
         const paragraphs = text.split('\n').filter(p => p.trim());
 
+        const pushLines = (line) => {
+          if (line.trim()) this.textLines.push(line.trim());
+        };
+
         paragraphs.forEach(para => {
-          // 如果段落長度小於等於20字，直接作為一行
-          if (para.length <= 20) {
-            this.textLines.push(para);
-          } else {
-            // 按約20字分割，但要考慮標點符號
-            let currentLine = '';
-            for (let i = 0; i < para.length; i++) {
-              currentLine += para[i];
-              // 如果累積到約20字，或者遇到句號、逗號且已超過15字，就換行
-              if (currentLine.length >= 20 ||
-                (currentLine.length >= 15 && /[，。]/.test(para[i]))) {
-                this.textLines.push(currentLine);
-                currentLine = '';
-              }
-            }
-            if (currentLine.trim()) {
-              this.textLines.push(currentLine);
+          let buffer = '';
+          for (let i = 0; i < para.length; i++) {
+            const char = para[i];
+            buffer += char;
+            const isPunct = /[，。、；：！？．？！、。]/.test(char);
+            if ((isPunct && buffer.length >= 8) || buffer.length >= MAX_CHARS) {
+              pushLines(buffer);
+              buffer = '';
             }
           }
+          pushLines(buffer);
         });
 
-        // 如果沒有換行，整個文本按約20字分割
         if (this.textLines.length === 0) {
-          let currentLine = '';
-          for (let i = 0; i < text.length; i++) {
-            currentLine += text[i];
-            if (currentLine.length >= 20 ||
-              (currentLine.length >= 15 && /[，。]/.test(text[i]))) {
-              this.textLines.push(currentLine);
-              currentLine = '';
-            }
-          }
-          if (currentLine.trim()) {
-            this.textLines.push(currentLine);
-          }
+          this.textLines.push(text);
         }
 
         this.currentLineIndex = 0;
