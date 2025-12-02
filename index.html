@@ -1,548 +1,2094 @@
 <!doctype html>
 <html lang="zh-Hant">
+
 <head>
-<meta charset="utf-8"/>
-<meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no,viewport-fit=cover"/>
-<meta name="theme-color" content="#000000">
-<meta name="description" content="專業超慢跑節拍器，支援語音鼓勵與精準節拍">
-<meta name="apple-mobile-web-app-capable" content="yes">
-<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
-<title>超慢跑節拍器 Pro Max</title>
-<style>
-  :root { 
-    --bg: #050505; --card-bg: rgba(255, 255, 255, 0.08); 
-    --primary: #4ea1ff; --text: #f0f0f0; --muted: #888;
-    --safe-top: env(safe-area-inset-top, 20px);
-    --safe-bottom: env(safe-area-inset-bottom, 20px);
-    --font-sys: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
-  }
+  <meta charset="utf-8" />
+  <meta name="viewport"
+    content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no,viewport-fit=cover" />
+  <meta name="theme-color" content="#000000">
+  <meta name="description" content="專業超慢跑節拍器，可以邊跑邊讀心經，支援語音鼓勵與精準節拍">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+  <title>超慢跑節拍器 Pro Max</title>
+  <style>
+    :root {
+      --bg: #050505;
+      --card-bg: rgba(255, 255, 255, 0.08);
+      --primary: #4ea1ff;
+      --text: #f0f0f0;
+      --muted: #888;
+      --safe-top: env(safe-area-inset-top, 20px);
+      --safe-bottom: env(safe-area-inset-bottom, 20px);
+      --font-sys: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+    }
 
-  * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; user-select: none; }
-  
-  body { 
-    margin: 0; padding: 0; 
-    font-family: var(--font-sys); 
-    background-color: var(--bg); 
-    color: var(--text);
-    height: 100vh; display: flex; flex-direction: column;
-    overflow: hidden; /* 防止滾動，適合單頁應用 */
-  }
+    * {
+      box-sizing: border-box;
+      -webkit-tap-highlight-color: transparent;
+      user-select: none;
+    }
 
-  /* 背景動態光暈 */
-  .ambient-light {
-    position: fixed; top: 0; left: 0; width: 100vw; height: 100vh;
-    background: radial-gradient(circle at 50% 30%, var(--primary-glow, #4ea1ff20), transparent 70%);
-    z-index: -1; transition: background 0.5s ease;
-  }
+    body {
+      margin: 0;
+      padding: 0;
+      font-family: var(--font-sys);
+      background-color: var(--bg);
+      color: var(--text);
+      height: 100vh;
+      display: flex;
+      flex-direction: column;
+      overflow: hidden;
+      /* 防止滾動，適合單頁應用 */
+    }
 
-  /* 主容器 */
-  .app-container {
-    flex: 1; display: flex; flex-direction: column;
-    padding: calc(var(--safe-top) + 16px) 20px calc(var(--safe-bottom) + 90px);
-    max-width: 600px; margin: 0 auto; width: 100%;
-    overflow-y: auto; /* 內容過長時可滾動 */
-  }
+    /* 背景動態光暈 */
+    .ambient-light {
+      position: fixed;
+      top: 0;
+      left: 0;
+      width: 100vw;
+      height: 100vh;
+      background: radial-gradient(circle at 50% 30%, var(--primary-glow, #4ea1ff20), transparent 70%);
+      z-index: -1;
+      transition: background 0.5s ease;
+    }
 
-  header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 24px; }
-  h1 { margin: 0; font-size: 24px; font-weight: 700; letter-spacing: -0.5px; }
-  .status-badge { 
-    font-size: 12px; padding: 4px 10px; border-radius: 20px; 
-    background: rgba(255,255,255,0.1); color: var(--muted); 
-    display: flex; align-items: center; gap: 6px;
-  }
-  .status-badge.active { background: var(--primary); color: #000; font-weight: 600; box-shadow: 0 0 10px var(--primary); }
+    /* 主容器 */
+    .app-container {
+      flex: 1;
+      display: flex;
+      flex-direction: column;
+      gap: 18px;
+      padding: calc(var(--safe-top) + 16px) 20px calc(var(--safe-bottom) + 24px);
+      max-width: 600px;
+      margin: 0 auto;
+      width: 100%;
+    }
 
-  /* 視覺舞台 (Visual Stage) */
-  .stage-wrapper {
-    position: relative; aspect-ratio: 16/9; width: 100%;
-    background: rgba(0,0,0,0.3); border-radius: 24px;
-    border: 1px solid rgba(255,255,255,0.1);
-    display: flex; align-items: center; justify-content: center;
-    margin-bottom: 24px; overflow: hidden;
-    cursor: pointer; transition: transform 0.2s;
-  }
-  .stage-wrapper:active { transform: scale(0.98); }
+    header {
+      display: flex;
+      justify-content: space-between;
+      align-items: flex-start;
+      gap: 16px;
+      margin-bottom: 20px;
+    }
 
-  /* 呼吸圓環 */
-  .breathing-ring {
-    width: 120px; height: 120px; border-radius: 50%;
-    border: 4px solid var(--primary);
-    box-shadow: 0 0 30px var(--primary-glow, #4ea1ff40);
-    display: flex; align-items: center; justify-content: center;
-    font-size: 48px; font-weight: 800; font-variant-numeric: tabular-nums;
-    transition: all 0.1s cubic-bezier(0.4, 0, 0.2, 1);
-    position: relative;
-    background: rgba(0,0,0,0.2);
-  }
-  
-  /* 節拍擴散波紋 */
-  .ripple {
-    position: absolute; border-radius: 50%; border: 2px solid var(--primary);
-    width: 100%; height: 100%; opacity: 0; pointer-events: none;
-  }
-  .ripple.animate { animation: ripple-anim 0.6s ease-out; }
-  @keyframes ripple-anim {
-    0% { transform: scale(1); opacity: 0.8; stroke-width: 4px; }
-    100% { transform: scale(2.5); opacity: 0; stroke-width: 0px; }
-  }
+    .title-group {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+    }
 
-  /* BPM 控制區 */
-  .bpm-control {
-    display: flex; align-items: center; justify-content: space-between;
-    background: var(--card-bg); padding: 16px; border-radius: 20px;
-    margin-bottom: 24px; backdrop-filter: blur(10px);
-  }
-  .bpm-btn {
-    width: 48px; height: 48px; border-radius: 14px; border: none;
-    background: rgba(255,255,255,0.1); color: #fff; font-size: 24px;
-    cursor: pointer; display: flex; align-items: center; justify-content: center;
-  }
-  .bpm-btn:active { background: rgba(255,255,255,0.2); }
-  .current-bpm { text-align: center; }
-  .current-bpm .val { font-size: 36px; font-weight: 800; line-height: 1; display: block; }
-  .current-bpm .label { font-size: 12px; color: var(--muted); text-transform: uppercase; }
+    .header-beat {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      width: 32px;
+      height: 32px;
+    }
 
-  /* 預設卡片 Grid */
-  .grid { 
-    display: grid; grid-template-columns: repeat(auto-fit, minmax(80px, 1fr)); 
-    gap: 12px; margin-bottom: 24px;
-  }
-  .preset-card {
-    background: var(--card-bg); padding: 12px; border-radius: 16px;
-    text-align: center; cursor: pointer; border: 1px solid transparent;
-    transition: 0.2s;
-  }
-  .preset-card.active {
-    background: var(--primary); color: #000;
-    box-shadow: 0 4px 12px rgba(0,0,0,0.3);
-  }
-  .preset-card b { display: block; font-size: 20px; margin-bottom: 4px; }
-  .preset-card span { font-size: 11px; opacity: 0.8; }
+    h1 {
+      margin: 0;
+      font-size: 24px;
+      font-weight: 700;
+      letter-spacing: -0.5px;
+    }
 
-  /* 設定開關區 */
-  .settings {
-    display: flex; gap: 10px; overflow-x: auto; padding-bottom: 10px;
-  }
-  .toggle-btn {
-    flex: 1; padding: 12px; background: var(--card-bg); border-radius: 14px;
-    display: flex; align-items: center; justify-content: center; gap: 8px;
-    font-size: 13px; color: var(--muted); cursor: pointer;
-    min-width: 100px; border: 1px solid transparent;
-  }
-  .toggle-btn.active { 
-    border-color: var(--primary); color: #fff; background: rgba(78, 161, 255, 0.1); 
-  }
-  .icon-dot { width: 8px; height: 8px; border-radius: 50%; background: #555; }
-  .toggle-btn.active .icon-dot { background: var(--primary); box-shadow: 0 0 5px var(--primary); }
+    .tts-toggle-btn {
+      padding: 6px 12px;
+      background: var(--card-bg);
+      border-radius: 12px;
+      font-size: 12px;
+      color: var(--muted);
+      cursor: pointer;
+      border: 1px solid transparent;
+      transition: 0.2s;
+      display: flex;
+      align-items: center;
+      gap: 6px;
+    }
 
-  /* 底部固定控制欄 */
-  .bottom-bar {
-    position: fixed; bottom: 0; left: 0; right: 0;
-    background: rgba(10, 10, 10, 0.9);
-    backdrop-filter: blur(20px); -webkit-backdrop-filter: blur(20px);
-    padding: 16px 20px calc(var(--safe-bottom) + 16px);
-    display: flex; gap: 16px; border-top: 1px solid rgba(255,255,255,0.1);
-    z-index: 100;
-  }
-  .main-btn {
-    flex: 1; height: 56px; border: none; border-radius: 28px;
-    font-size: 18px; font-weight: 600; cursor: pointer;
-    display: flex; align-items: center; justify-content: center; gap: 8px;
-    transition: transform 0.1s; color: #fff;
-  }
-  .main-btn:active { transform: scale(0.96); }
-  .btn-start { background: var(--primary); color: #000; box-shadow: 0 4px 15px var(--primary-glow, rgba(78,161,255,0.4)); }
-  .btn-stop { background: #333; color: #ff4d4f; flex: 0.4; display: none; }
-  .btn-stop.visible { display: flex; }
+    .tts-toggle-btn.active {
+      border-color: var(--primary);
+      color: #fff;
+      background: rgba(78, 161, 255, 0.1);
+    }
 
-  /* 沉浸模式樣式 */
-  body.showcase .app-container > *:not(.stage-wrapper) { opacity: 0; pointer-events: none; }
-  body.showcase .bottom-bar { transform: translateY(150%); }
-  body.showcase .stage-wrapper {
-    position: fixed; top: 0; left: 0; width: 100vw; height: 100vh;
-    border-radius: 0; border: none; z-index: 200;
-    background: #000; margin: 0;
-  }
-  body.showcase .breathing-ring { width: 200px; height: 200px; font-size: 80px; border-width: 6px; }
-  .exit-showcase {
-    position: fixed; top: calc(var(--safe-top) + 20px); right: 20px;
-    padding: 8px 16px; background: rgba(255,255,255,0.2);
-    backdrop-filter: blur(4px); border-radius: 20px; color: #fff;
-    font-size: 13px; z-index: 201; display: none; cursor: pointer;
-  }
-  body.showcase .exit-showcase { display: block; }
-  
-  /* 語音選擇 */
-  .voice-select {
-    width: 100%; padding: 12px; margin-top: 10px; background: #000; color: #fff;
-    border: 1px solid #333; border-radius: 12px; font-size: 14px;
-  }
-</style>
+    .tts-toggle-btn .icon-dot {
+      width: 6px;
+      height: 6px;
+      border-radius: 50%;
+      background: #555;
+    }
+
+    .tts-toggle-btn.active .icon-dot {
+      background: var(--primary);
+      box-shadow: 0 0 5px var(--primary);
+    }
+
+    /* 計時器按鈕 */
+    .timer-btn {
+      padding: 6px 12px;
+      background: var(--card-bg);
+      border-radius: 12px;
+      font-size: 12px;
+      color: var(--muted);
+      cursor: pointer;
+      border: 1px solid transparent;
+      transition: 0.2s;
+      display: flex;
+      align-items: center;
+      gap: 6px;
+    }
+
+    .timer-btn:hover {
+      border-color: rgba(255, 255, 255, 0.2);
+      color: #fff;
+      background: rgba(255, 255, 255, 0.12);
+    }
+
+    .timer-btn.active {
+      border-color: var(--primary);
+      color: #fff;
+      background: rgba(78, 161, 255, 0.1);
+    }
+
+    .timer-btn.match-preset {
+      border-color: var(--primary);
+      color: #000;
+      background: var(--primary);
+      box-shadow: 0 4px 12px var(--primary-glow, rgba(78, 161, 255, 0.4));
+    }
+
+    .timer-btn.match-preset .btn-value {
+      color: #000;
+    }
+
+    .timer-btn .icon-dot {
+      width: 6px;
+      height: 6px;
+      border-radius: 50%;
+      background: #555;
+    }
+
+    .timer-btn.active .icon-dot {
+      background: var(--primary);
+      box-shadow: 0 0 5px var(--primary);
+    }
+
+    /* 計時器顯示 */
+    .timer-display {
+      text-align: center;
+      font-size: 14px;
+      color: var(--muted);
+      margin-top: 8px;
+      min-height: 20px;
+    }
+
+    .timer-display.active {
+      color: var(--primary);
+      font-weight: 600;
+    }
+
+    /* 彈出視窗 (語音/計時/經書/步頻) */
+    .voice-modal,
+    .timer-modal,
+    .text-modal,
+    .bpm-modal {
+      position: fixed;
+      top: 0;
+      left: 0;
+      right: 0;
+      bottom: 0;
+      background: rgba(0, 0, 0, 0.7);
+      backdrop-filter: blur(4px);
+      z-index: 1000;
+      display: none;
+      align-items: center;
+      justify-content: center;
+      padding: 20px;
+    }
+
+    .voice-modal.show,
+    .timer-modal.show,
+    .text-modal.show,
+    .bpm-modal.show {
+      display: flex;
+    }
+
+    .voice-modal-content,
+    .timer-modal-content,
+    .text-modal-content {
+      background: var(--card-bg);
+      border-radius: 20px;
+      padding: 24px;
+      max-width: 400px;
+      width: 100%;
+      max-height: 80vh;
+      overflow-y: auto;
+      backdrop-filter: blur(20px);
+      border: 1px solid rgba(255, 255, 255, 0.1);
+    }
+
+    .voice-modal-header,
+    .timer-modal-header,
+    .text-modal-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 20px;
+    }
+
+    .voice-modal-title,
+    .timer-modal-title,
+    .text-modal-title {
+      font-size: 18px;
+      font-weight: 600;
+      color: var(--text);
+    }
+
+    .voice-modal-close,
+    .timer-modal-close,
+    .text-modal-close {
+      width: 32px;
+      height: 32px;
+      border-radius: 16px;
+      background: rgba(255, 255, 255, 0.1);
+      border: none;
+      color: var(--text);
+      font-size: 20px;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+
+    .voice-modal-close:active,
+    .timer-modal-close:active,
+    .text-modal-close:active {
+      background: rgba(255, 255, 255, 0.2);
+    }
+
+    .voice-list {
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+    }
+
+    .voice-item {
+      padding: 12px;
+      background: rgba(255, 255, 255, 0.05);
+      border-radius: 12px;
+      border: 1px solid transparent;
+      cursor: pointer;
+      transition: 0.2s;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+
+    .voice-item:hover {
+      background: rgba(255, 255, 255, 0.1);
+      border-color: rgba(255, 255, 255, 0.2);
+    }
+
+    .voice-item.selected {
+      background: rgba(78, 161, 255, 0.2);
+      border-color: var(--primary);
+    }
+
+    .voice-item-name {
+      font-size: 14px;
+      color: var(--text);
+    }
+
+    .voice-item-lang {
+      font-size: 11px;
+      color: var(--muted);
+    }
+
+    .voice-item-check {
+      color: var(--primary);
+      font-size: 18px;
+      display: none;
+    }
+
+    .voice-item.selected .voice-item-check {
+      display: block;
+    }
+
+    /* 視覺舞台 (Visual Stage) */
+    .stage-wrapper {
+      position: relative;
+      width: 100%;
+      background: rgba(0, 0, 0, 0.3);
+      border-radius: 24px;
+      border: 1px solid rgba(255, 255, 255, 0.1);
+      display: flex;
+      flex-direction: column;
+      align-items: stretch;
+      padding: 20px;
+      margin-bottom: 12px;
+      cursor: pointer;
+      transition: transform 0.2s;
+      gap: 16px;
+      min-height: 240px;
+    }
+
+    .stage-wrapper:active {
+      transform: scale(0.98);
+    }
+
+    .stage-content {
+      flex: 1;
+      display: flex;
+      flex-direction: column;
+      justify-content: center;
+      position: relative;
+      min-height: 150px;
+    }
+
+    /* 呼吸節拍小點 */
+    .breathing-ring {
+      width: 26px;
+      height: 26px;
+      border-radius: 50%;
+      border: 2px solid var(--primary);
+      box-shadow: 0 0 10px var(--primary-glow, #4ea1ff40);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 0;
+      font-weight: 700;
+      transition: all 0.1s cubic-bezier(0.4, 0, 0.2, 1);
+      position: relative;
+      background: rgba(0, 0, 0, 0.2);
+    }
+
+    #beatNum {
+      font-size: 0;
+      color: transparent;
+    }
+
+    .pulse-controls {
+      width: 100%;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 10px;
+    }
+
+    @media (min-width: 420px) {
+      .pulse-controls {
+        flex-direction: row;
+        justify-content: center;
+      }
+    }
+
+    .pulse-btn {
+      width: 100%;
+      max-width: 220px;
+      border: none;
+      border-radius: 24px;
+      padding: 12px 18px;
+      font-size: 16px;
+      font-weight: 600;
+      cursor: pointer;
+      transition: transform 0.1s, background 0.2s, color 0.2s;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 6px;
+      color: #fff;
+      background: rgba(255, 255, 255, 0.08);
+    }
+
+    .pulse-btn:active {
+      transform: scale(0.97);
+    }
+
+    .btn-start {
+      background: var(--primary);
+      color: #000;
+    }
+
+    .btn-stop {
+      background: rgba(255, 255, 255, 0.08);
+      color: #ff6b6b;
+      opacity: 0;
+      pointer-events: none;
+      transform: translateY(4px);
+      transition: opacity 0.2s ease, transform 0.2s ease;
+    }
+
+    .btn-stop.visible {
+      opacity: 1;
+      pointer-events: auto;
+      transform: translateY(0);
+    }
+
+    .stage-placeholder {
+      font-size: 14px;
+      color: rgba(255, 255, 255, 0.55);
+      text-align: center;
+      line-height: 1.6;
+      display: none;
+      padding: 12px;
+      flex-direction: column;
+      gap: 8px;
+    }
+
+    .stage-placeholder .placeholder-main {
+      font-size: 18px;
+      font-weight: 700;
+      color: var(--text);
+    }
+
+    .stage-placeholder .placeholder-hint {
+      font-size: 12px;
+      opacity: 0.6;
+    }
+
+    /* 節拍擴散波紋 */
+    .ripple {
+      position: absolute;
+      border-radius: 50%;
+      border: 1px solid var(--primary);
+      width: 100%;
+      height: 100%;
+      opacity: 0;
+      pointer-events: none;
+    }
+
+    .ripple.animate {
+      animation: ripple-anim 0.6s ease-out;
+    }
+
+    @keyframes ripple-anim {
+      0% {
+        transform: scale(1);
+        opacity: 0.8;
+        stroke-width: 2px;
+      }
+
+      100% {
+        transform: scale(2.5);
+        opacity: 0;
+        stroke-width: 0px;
+      }
+    }
+
+    /* 多功能按鈕疊字 */
+    /* BPM 選擇區塊 */
+    .bpm-modal-body {
+      display: flex;
+      flex-direction: column;
+      gap: 16px;
+    }
+
+    .bpm-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(120px, 1fr));
+      gap: 12px;
+    }
+
+    .bpm-card {
+      border-radius: 16px;
+      border: 1px solid rgba(255, 255, 255, 0.12);
+      background: rgba(255, 255, 255, 0.03);
+      padding: 14px;
+      cursor: pointer;
+      transition: border 0.2s, background 0.2s, transform 0.2s, color 0.2s;
+      display: flex;
+      flex-direction: column;
+      gap: 6px;
+      color: var(--text);
+    }
+
+    .bpm-card:hover {
+      border-color: rgba(255, 255, 255, 0.25);
+      background: rgba(255, 255, 255, 0.08);
+    }
+
+    .bpm-card:active {
+      transform: translateY(1px);
+    }
+
+    .bpm-card.active {
+      border-color: var(--primary);
+      background: rgba(78, 161, 255, 0.15);
+      box-shadow: 0 4px 12px rgba(78, 161, 255, 0.25);
+    }
+
+    .bpm-card-value {
+      font-size: 26px;
+      font-weight: 800;
+      display: flex;
+      align-items: baseline;
+      gap: 6px;
+    }
+
+    .bpm-card-value small {
+      font-size: 12px;
+      color: var(--muted);
+    }
+
+    .bpm-card-desc {
+      font-size: 13px;
+      color: rgba(255, 255, 255, 0.75);
+    }
+
+    .bpm-card-label {
+      font-size: 12px;
+      font-weight: 600;
+      color: rgba(255, 255, 255, 0.65);
+      text-transform: uppercase;
+      letter-spacing: 1px;
+      margin-bottom: 6px;
+    }
+
+    .bpm-manual {
+      background: rgba(255, 255, 255, 0.03);
+      border-radius: 16px;
+      border: 1px solid rgba(255, 255, 255, 0.08);
+      padding: 14px;
+      color: var(--text);
+    }
+
+    .bpm-manual-controls {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+    }
+
+    .bpm-mini {
+      flex: 0 0 48px;
+      height: 48px;
+      border-radius: 14px;
+      border: 1px solid rgba(255, 255, 255, 0.12);
+      background: rgba(0, 0, 0, 0.2);
+      color: #fff;
+      font-size: 22px;
+      font-weight: 700;
+      cursor: pointer;
+      transition: background 0.2s;
+    }
+
+    .bpm-mini:hover {
+      background: rgba(255, 255, 255, 0.18);
+    }
+
+    .bpm-mini:active {
+      background: rgba(255, 255, 255, 0.25);
+    }
+
+    .bpm-manual-value {
+      flex: 1;
+      text-align: center;
+      font-size: 22px;
+      font-weight: 800;
+      letter-spacing: 0.5px;
+    }
+
+    /* 沉浸模式樣式 */
+    body.showcase .app-container>*:not(.stage-wrapper) {
+      opacity: 0;
+      pointer-events: none;
+    }
+
+    body.showcase .pulse-controls {
+      opacity: 0;
+      pointer-events: none;
+    }
+
+    body.showcase .stage-wrapper {
+      position: fixed;
+      top: 0;
+      left: 0;
+      width: 100vw;
+      height: 100vh;
+      border-radius: 0;
+      border: none;
+      z-index: 200;
+      background: #000;
+      margin: 0;
+      padding: 0;
+    }
+
+    body.showcase .stage-content {
+      height: 100%;
+    }
+
+    body.showcase .text-display {
+      height: 100%;
+      padding: clamp(24px, 6vh, 80px) clamp(20px, 8vw, 80px);
+      border-radius: 0;
+      border: none;
+      background: transparent;
+    }
+
+    body.showcase .text-lines-container {
+      position: static;
+      transform: none;
+      height: 100%;
+      justify-content: center;
+      row-gap: clamp(12px, 4vh, 36px);
+    }
+
+    body.showcase .text-line {
+      font-size: clamp(28px, 5vw, 56px);
+      line-height: 1.6;
+      min-height: auto;
+      max-width: min(92vw, 720px);
+      padding: 0;
+    }
+
+    body.showcase .text-char {
+      margin: 0 4px;
+    }
+
+    .exit-showcase {
+      position: fixed;
+      top: calc(var(--safe-top) + 20px);
+      right: 20px;
+      padding: 8px 16px;
+      background: rgba(255, 255, 255, 0.2);
+      backdrop-filter: blur(4px);
+      border-radius: 20px;
+      color: #fff;
+      font-size: 13px;
+      z-index: 201;
+      display: none;
+      cursor: pointer;
+    }
+
+    body.showcase .exit-showcase {
+      display: block;
+    }
+
+    /* 語音選擇 */
+    .voice-select {
+      width: 100%;
+      padding: 12px;
+      margin-top: 10px;
+      background: #000;
+      color: #fff;
+      border: 1px solid #333;
+      border-radius: 12px;
+      font-size: 14px;
+    }
+
+
+    /* 經文顯示區域 */
+    .text-display {
+      background: rgba(0, 0, 0, 0.35);
+      padding: 16px;
+      border-radius: 18px;
+      margin: 0;
+      height: clamp(160px, 32vh, 240px);
+      overflow: hidden;
+      backdrop-filter: blur(10px);
+      position: relative;
+      border: 1px solid rgba(255, 255, 255, 0.05);
+    }
+
+    .text-display.hidden {
+      display: none;
+    }
+
+    .text-display.hidden+.stage-placeholder {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+    }
+
+    .text-lines-container {
+      position: absolute;
+      top: 50%;
+      left: 0;
+      right: 0;
+      transform: translateY(-50%);
+      transition: transform 0.3s ease;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+    }
+
+    .text-line {
+      line-height: 2.5;
+      font-size: 20px;
+      text-align: center;
+      padding: 8px 0;
+      min-height: 60px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      transition: all 0.3s ease;
+    }
+
+    .text-line.prev {
+      opacity: 0.5;
+      color: var(--muted);
+    }
+
+    .text-line.current {
+      opacity: 1;
+      color: var(--text);
+    }
+
+    .text-line.next {
+      opacity: 0.5;
+      color: var(--muted);
+    }
+
+    .text-char {
+      display: inline-block;
+      margin: 0 2px;
+      transition: all 0.2s ease;
+    }
+
+    .text-char.highlight {
+      color: var(--primary);
+      font-weight: 700;
+      transform: scale(1.4);
+      text-shadow: 0 0 15px var(--primary-glow, rgba(78, 161, 255, 0.8));
+    }
+  </style>
 </head>
+
 <body>
 
-<div class="ambient-light" id="ambient"></div>
+  <div class="ambient-light" id="ambient"></div>
 
-<div class="app-container">
-  <header>
-    <h1>超慢跑 <span style="color:var(--primary)">Pro</span></h1>
-    <div class="status-badge" id="statusBadge">
-      <div class="icon-dot" style="width:6px;height:6px;background:currentColor"></div>
-      <span>就緒</span>
-    </div>
-  </header>
-
-  <div class="stage-wrapper" id="stage">
-    <div class="breathing-ring" id="ring">
-      <span id="beatNum">Go</span>
-      <div class="ripple" id="ripple"></div>
-    </div>
-    <div style="position:absolute; bottom:20px; font-size:12px; opacity:0.5">點擊進入專注模式</div>
-  </div>
-
-  <div class="bpm-control">
-    <button class="bpm-btn" onclick="App.adjustBpm(-1)">−</button>
-    <div class="current-bpm">
-      <span class="val" id="displayBpm">180</span>
-      <span class="label">BPM 步頻</span>
-    </div>
-    <button class="bpm-btn" onclick="App.adjustBpm(1)">+</button>
-  </div>
-
-  <div class="grid" id="presetGrid">
-    </div>
-
-  <div class="settings">
-    <div class="toggle-btn active" id="btn-tts" onclick="App.toggleFeature('tts')">
-      <div class="icon-dot"></div> 語音教練
-    </div>
-    <div class="toggle-btn" id="btn-vib" onclick="App.toggleFeature('vib')">
-      <div class="icon-dot"></div> 震動反饋
-    </div>
-  </div>
-  
-  <select id="voiceSelect" class="voice-select" style="display:none"></select>
-  <div style="text-align:center; font-size:12px; color:#555; margin-top:20px;">
-    建議佩戴耳機以獲得最佳體驗<br>每 60 秒會有語音鼓勵
-  </div>
-</div>
-
-<div class="bottom-bar">
-  <button class="main-btn btn-stop" id="btnStop" onclick="App.stop()">結束</button>
-  <button class="main-btn btn-start" id="btnStart" onclick="App.toggle()">
-    <span id="btnText">開始跑步</span>
-  </button>
-</div>
-
-<div class="exit-showcase" onclick="App.toggleShowcase(false)">退出專注模式 ✕</div>
-
-<script>
-const PRESETS = [
-  { bpm: 150, name: '恢復', color: '#4ea1ff', glow: '#4ea1ff' },
-  { bpm: 160, name: '熱身', color: '#1dd1a1', glow: '#1dd1a1' },
-  { bpm: 170, name: '燃脂', color: '#fbc531', glow: '#fbc531' },
-  { bpm: 180, name: '黃金', color: '#ff9f43', glow: '#ff9f43' },
-  { bpm: 190, name: '強化', color: '#ff6b6b', glow: '#ff6b6b' },
-];
-
-const PHRASES = [
-  "保持微笑，肩膀放鬆", "核心收緊，用臀部發力", "呼吸要順暢，不要憋氣", 
-  "腳步輕盈，像貓一樣落地", "很好，維持這個節奏", "加油，燃燒脂肪", 
-  "擺臂自然，視線看向遠方", "膝蓋保持微彎，保護關節"
-];
-
-const AudioEngine = {
-  ctx: null,
-  nextNoteTime: 0.0,
-  timerID: null,
-  lookahead: 25.0,
-  scheduleAheadTime: 0.1,
-  queue: [],
-  isPlaying: false,
-
-  init() {
-    if (!this.ctx) {
-      this.ctx = new (window.AudioContext || window.webkitAudioContext)();
-    }
-    if (this.ctx.state === 'suspended') {
-      this.ctx.resume();
-    }
-  },
-
-  // 播放高質感的木魚聲/節拍聲
-  playClick(time, beatCount) {
-    const osc = this.ctx.createOscillator();
-    const gain = this.ctx.createGain();
-    
-    // 強拍 (Beat 1) 音調較高，弱拍音調較低
-    const isStrong = beatCount % 4 === 0;
-    
-    // 使用 Triangle 波形，聽起來比較圓潤
-    osc.type = isStrong ? 'sine' : 'triangle';
-    osc.frequency.setValueAtTime(isStrong ? 1200 : 800, time);
-    osc.frequency.exponentialRampToValueAtTime(isStrong ? 600 : 400, time + 0.1);
-
-    // 聲音包絡 (Envelope)：短促有力
-    gain.gain.setValueAtTime(0, time);
-    gain.gain.linearRampToValueAtTime(isStrong ? 1.0 : 0.6, time + 0.005);
-    gain.gain.exponentialRampToValueAtTime(0.001, time + 0.1);
-
-    osc.connect(gain);
-    gain.connect(this.ctx.destination);
-
-    osc.start(time);
-    osc.stop(time + 0.1);
-  },
-
-  schedule() {
-    while (this.nextNoteTime < this.ctx.currentTime + this.scheduleAheadTime) {
-      // 安排聲音
-      this.playClick(this.nextNoteTime, App.beatCount);
-      // 安排視覺 (推入隊列，由 requestAnimationFrame 處理)
-      App.scheduleVisual(this.nextNoteTime, App.beatCount);
-      
-      const secondsPerBeat = 60.0 / App.bpm;
-      this.nextNoteTime += secondsPerBeat;
-      App.beatCount++;
-    }
-    this.timerID = setTimeout(() => this.schedule(), this.lookahead);
-  },
-
-  start() {
-    if (this.isPlaying) return;
-    this.init();
-    this.isPlaying = true;
-    this.nextNoteTime = this.ctx.currentTime + 0.1;
-    App.beatCount = 0;
-    this.schedule();
-  },
-
-  stop() {
-    this.isPlaying = false;
-    clearTimeout(this.timerID);
-  }
-};
-
-const TTS = {
-  enabled: true,
-  lastSpeakTime: 0,
-  interval: 60000, // 60秒
-  voices: [],
-
-  init() {
-    const load = () => {
-      this.voices = window.speechSynthesis.getVoices();
-      // 優先選擇 Google 中文 或 台灣口音
-      const zh = this.voices.filter(v => v.lang.includes('zh') || v.lang.includes('TW'));
-      // 填充隱藏的選單供調試
-      const select = document.getElementById('voiceSelect');
-      select.innerHTML = zh.map(v => `<option value="${v.name}">${v.name}</option>`).join('');
-    };
-    window.speechSynthesis.onvoiceschanged = load;
-    load();
-  },
-
-  speak(text) {
-    if (!this.enabled || !window.speechSynthesis) return;
-    window.speechSynthesis.cancel(); // 打斷之前的
-    const u = new SpeechSynthesisUtterance(text);
-    const preferred = this.voices.find(v => v.name.includes("Google") && v.lang.includes("TW")) || 
-                      this.voices.find(v => v.lang.includes("TW"));
-    if (preferred) u.voice = preferred;
-    u.rate = 1.1; // 稍微快一點，更有活力
-    u.pitch = 1.1;
-    window.speechSynthesis.speak(u);
-  },
-
-  checkAndSpeak(now) {
-    if (now - this.lastSpeakTime > this.interval && App.isRunning) {
-      const msg = PHRASES[Math.floor(Math.random() * PHRASES.length)];
-      this.speak(msg);
-      this.lastSpeakTime = now;
-    }
-  }
-};
-
-const WakeLock = {
-  sentinel: null,
-  async enable() {
-    if ('wakeLock' in navigator) {
-      try { this.sentinel = await navigator.wakeLock.request('screen'); } 
-      catch (e) { console.log('WakeLock failed', e); }
-    }
-  },
-  disable() {
-    if (this.sentinel) { this.sentinel.release(); this.sentinel = null; }
-  }
-};
-
-const App = {
-  bpm: 180,
-  isRunning: false,
-  beatCount: 0,
-  visualQueue: [],
-  features: { tts: true, vib: false },
-
-  init() {
-    this.renderPresets();
-    this.selectPreset(180); // Default
-    TTS.init();
-
-    // Event Listeners
-    document.getElementById('stage').addEventListener('click', () => {
-      if(this.isRunning) this.toggleShowcase(true);
-    });
-    
-    // Animation Loop
-    requestAnimationFrame(this.drawLoop.bind(this));
-  },
-
-  renderPresets() {
-    const grid = document.getElementById('presetGrid');
-    grid.innerHTML = PRESETS.map(p => `
-      <div class="preset-card" id="p-${p.bpm}" onclick="App.selectPreset(${p.bpm})">
-        <b>${p.bpm}</b>
-        <span>${p.name}</span>
+  <div class="app-container">
+    <header>
+      <div class="title-group">
+        <h1>超慢跑 <span style="color:var(--primary)">Pro</span></h1>
+        <div class="header-beat">
+          <div class="breathing-ring" id="ring">
+            <span id="beatNum">Go</span>
+            <div class="ripple" id="ripple"></div>
+          </div>
+        </div>
       </div>
-    `).join('');
-  },
+      <div style="display: flex; align-items: center; gap: 12px;">
+        <button class="timer-btn" id="btn-text" onclick="App.showTextModal()">
+          <div class="icon-dot"></div>
+          <span>經書</span>
+        </button>
+        <button class="timer-btn" id="btn-bpm" onclick="App.showBpmModal()">
+          <div class="icon-dot"></div>
+          <span class="btn-value" id="btnBpmValue">180 BPM</span>
+        </button>
+        <button class="timer-btn" id="btn-timer" onclick="App.showTimerModal()">
+          <div class="icon-dot"></div>
+          <span>計時</span>
+        </button>
+        <button class="tts-toggle-btn active" id="btn-tts" onclick="App.showVoiceModal()">
+          <div class="icon-dot"></div>
+          <span>語音</span>
+        </button>
+        <button class="timer-btn" id="btn-beat" onclick="App.showBeatModal()">
+          <div class="icon-dot"></div>
+          <span id="beatLabel">木魚</span>
+        </button>
+      </div>
+    </header>
 
-  selectPreset(bpm) {
-    this.bpm = bpm;
-    document.getElementById('displayBpm').textContent = bpm;
-    
-    // 更新樣式
-    document.querySelectorAll('.preset-card').forEach(el => el.classList.remove('active'));
-    const target = document.getElementById(`p-${bpm}`);
-    if(target) target.classList.add('active'); // Custom BPM 可能沒有對應卡片
+    <div class="timer-display" id="timerDisplay"></div>
 
-    // 更新主題色
-    const p = PRESETS.find(x => x.bpm === bpm) || PRESETS[3];
-    document.documentElement.style.setProperty('--primary', p.color);
-    document.documentElement.style.setProperty('--primary-glow', p.glow);
-    
-    if(this.isRunning) TTS.speak(`調整為 ${bpm}`);
-  },
+    <div class="stage-wrapper" id="stage">
+      <div class="stage-content">
+        <div class="text-display hidden" id="textDisplay">
+          <div class="text-lines-container" id="textLinesContainer"></div>
+        </div>
+        <div class="stage-placeholder" id="placeholderMessage">
+          <span class="placeholder-main">點擊下方開始，享受專注節奏</span>
+          <span class="placeholder-hint">點擊舞台可切換專注模式</span>
+        </div>
+      </div>
+      <div class="pulse-controls">
+        <button class="pulse-btn btn-start" id="btnStart" onclick="event.stopPropagation(); App.toggle();">
+          <span id="btnText">開始跑步</span>
+        </button>
+        <button class="pulse-btn btn-stop" id="btnStop" onclick="event.stopPropagation(); App.stop();">停止</button>
+      </div>
+    </div>
 
-  adjustBpm(delta) {
-    let newBpm = this.bpm + delta;
-    if(newBpm < 30) newBpm = 30;
-    if(newBpm > 300) newBpm = 300;
-    
-    // 如果剛好對應到預設值，切換樣式，否則只改數字
-    const match = PRESETS.find(p => p.bpm === newBpm);
-    if(match) this.selectPreset(newBpm);
-    else {
-      this.bpm = newBpm;
-      document.getElementById('displayBpm').textContent = newBpm;
-      document.querySelectorAll('.preset-card').forEach(el => el.classList.remove('active'));
-    }
-  },
+    <select id="voiceSelect" class="voice-select" style="display:none"></select>
 
-  toggle() {
-    if (this.isRunning) {
-      this.pause();
-    } else {
-      AudioEngine.start();
-      WakeLock.enable();
-      this.isRunning = true;
-      document.getElementById('btnText').textContent = "暫停";
-      document.getElementById('btnStart').style.background = "#fff";
-      document.getElementById('btnStart').style.color = "#000";
-      document.getElementById('btnStop').classList.add('visible');
-      document.getElementById('statusBadge').classList.add('active');
-      document.getElementById('statusBadge').querySelector('span').textContent = "跑步中";
-      TTS.lastSpeakTime = Date.now();
-      TTS.speak("開始運動，請保持呼吸節奏");
-    }
-  },
+    <!-- 語音選擇彈出視窗 -->
+    <div class="voice-modal" id="voiceModal">
+      <div class="voice-modal-content">
+        <div class="voice-modal-header">
+          <div class="voice-modal-title">選擇語音</div>
+          <button class="voice-modal-close" onclick="App.closeVoiceModal()">✕</button>
+        </div>
+        <div class="voice-list" id="voiceList"></div>
+      </div>
+    </div>
 
-  pause() {
-    AudioEngine.stop();
-    this.isRunning = false;
-    document.getElementById('btnText').textContent = "繼續";
-    document.getElementById('btnStart').style.background = "var(--primary)";
-    document.getElementById('statusBadge').classList.remove('active');
-    document.getElementById('statusBadge').querySelector('span').textContent = "已暫停";
-  },
+    <!-- 節拍音色彈出視窗 -->
+    <div class="text-modal" id="beatModal">
+      <div class="text-modal-content">
+        <div class="text-modal-header">
+          <div class="text-modal-title">節拍音色</div>
+          <button class="text-modal-close" onclick="App.closeBeatModal()">✕</button>
+        </div>
+        <div class="voice-list" id="beatList"></div>
+      </div>
+    </div>
 
-  stop() {
-    this.pause();
-    document.getElementById('btnText').textContent = "開始跑步";
-    document.getElementById('btnStop').classList.remove('visible');
-    document.getElementById('beatNum').textContent = "Go";
-    document.getElementById('statusBadge').querySelector('span').textContent = "就緒";
-    this.beatCount = 0;
-    WakeLock.disable();
-    TTS.speak("運動結束，辛苦了");
-    this.toggleShowcase(false);
-  },
+    <!-- 經書選擇彈出視窗 -->
+    <div class="text-modal" id="textModal">
+      <div class="text-modal-content">
+        <div class="text-modal-header">
+          <div class="text-modal-title">選擇經書</div>
+          <button class="text-modal-close" onclick="App.closeTextModal()">✕</button>
+        </div>
+        <div class="voice-list" id="textList"></div>
+      </div>
+    </div>
 
-  toggleFeature(key) {
-    this.features[key] = !this.features[key];
-    const btn = document.getElementById(key === 'tts' ? 'btn-tts' : 'btn-vib');
-    btn.classList.toggle('active', this.features[key]);
-    if(key === 'tts') TTS.enabled = this.features[key];
-  },
+    <!-- 步頻選擇彈出視窗 -->
+    <div class="bpm-modal" id="bpmModal">
+      <div class="text-modal-content">
+        <div class="text-modal-header">
+          <div class="text-modal-title">設定步頻</div>
+          <button class="text-modal-close" onclick="App.closeBpmModal()">✕</button>
+        </div>
+        <div class="bpm-modal-body">
+          <div class="bpm-grid" id="bpmPresetList"></div>
+          <div class="bpm-manual">
+            <div class="bpm-card-label">手動微調</div>
+            <div class="bpm-manual-controls">
+              <button class="bpm-mini" onclick="App.adjustBpm(-1)">−</button>
+              <div class="bpm-manual-value" id="bpmManualValue">180 BPM</div>
+              <button class="bpm-mini" onclick="App.adjustBpm(1)">+</button>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
 
-  toggleShowcase(active) {
-    if(active) document.body.classList.add('showcase');
-    else document.body.classList.remove('showcase');
-  },
+    <!-- 計時器選擇彈出視窗 -->
+    <div class="timer-modal" id="timerModal">
+      <div class="timer-modal-content">
+        <div class="timer-modal-header">
+          <div class="timer-modal-title">設定計時器</div>
+          <button class="timer-modal-close" onclick="App.closeTimerModal()">✕</button>
+        </div>
+        <div class="voice-list" id="timerList"></div>
+      </div>
+    </div>
+  </div>
 
-  scheduleVisual(time, count) {
-    this.visualQueue.push({ time, count });
-  },
+  <div class="exit-showcase" onclick="App.toggleShowcase(false)">退出專注模式 ✕</div>
 
-  drawLoop() {
-    const drawTime = AudioEngine.ctx ? AudioEngine.ctx.currentTime : 0;
-    const now = Date.now();
+  <script>
+    const PRESETS = [
+      { bpm: 150, name: '恢復', color: '#4ea1ff', glow: '#4ea1ff' },
+      { bpm: 160, name: '熱身', color: '#1dd1a1', glow: '#1dd1a1' },
+      { bpm: 170, name: '燃脂', color: '#fbc531', glow: '#fbc531' },
+      { bpm: 180, name: '黃金', color: '#ff9f43', glow: '#ff9f43' },
+      { bpm: 190, name: '強化', color: '#ff6b6b', glow: '#ff6b6b' },
+      { bpm: 200, name: '爆發', color: '#b967ff', glow: '#b967ff' },
+    ];
 
-    // 處理視覺隊列
-    while(this.visualQueue.length && this.visualQueue[0].time <= drawTime) {
-      const event = this.visualQueue.shift();
-      this.triggerBeat(event.count);
-    }
+    const BEAT_PROFILES = [
+      {
+        id: 'classic',
+        label: '木魚 · 經典',
+        short: '木魚',
+        desc: '圓潤木魚聲，適合靜心節奏',
+        strong: { wave: 'sine', freq: 1200, sweep: 520, gain: 1.0 },
+        weak: { wave: 'triangle', freq: 880, sweep: 410, gain: 0.65 },
+        attack: 0.005,
+        release: 0.14
+      },
+      {
+        id: 'crystal',
+        label: '晶鈴 · 輕盈',
+        short: '晶鈴',
+        desc: '清脆電子鈴聲，提振心情',
+        strong: { wave: 'triangle', freq: 1500, sweep: 700, gain: 0.95 },
+        weak: { wave: 'sine', freq: 1100, sweep: 500, gain: 0.6 },
+        attack: 0.004,
+        release: 0.18
+      },
+      {
+        id: 'analog',
+        label: '節拍器 · 經典',
+        short: '節拍器',
+        desc: '復古機械節拍，乾脆俐落',
+        strong: { wave: 'square', freq: 950, sweep: 360, gain: 0.85 },
+        weak: { wave: 'square', freq: 720, sweep: 300, gain: 0.55 },
+        attack: 0.003,
+        release: 0.08
+      },
+      {
+        id: 'drum',
+        label: '輕鼓 · 律動',
+        short: '輕鼓',
+        desc: '溫暖輕鼓感，增加節奏感',
+        strong: { wave: 'sawtooth', freq: 260, sweep: 120, gain: 1.1 },
+        weak: { wave: 'sawtooth', freq: 210, sweep: 90, gain: 0.75 },
+        attack: 0.01,
+        release: 0.22
+      },
+      {
+        id: 'bamboo',
+        label: '竹板 · 清脆',
+        short: '竹板',
+        desc: '乾脆竹板敲擊，明亮清楚',
+        strong: { wave: 'square', freq: 1350, sweep: 250, gain: 0.9 },
+        weak: { wave: 'square', freq: 970, sweep: 180, gain: 0.6 },
+        attack: 0.002,
+        release: 0.06
+      },
+      {
+        id: 'pulse',
+        label: '脈衝 · 電子',
+        short: '脈衝',
+        desc: '電子脈衝質感，科技未來感',
+        strong: { wave: 'sawtooth', freq: 1600, sweep: 900, gain: 0.85 },
+        weak: { wave: 'triangle', freq: 1200, sweep: 600, gain: 0.55 },
+        attack: 0.004,
+        release: 0.16
+      },
+      {
+        id: 'airy',
+        label: '氣流 · 療癒',
+        short: '氣流',
+        desc: '柔和氣流聲，舒緩身心',
+        strong: { wave: 'sine', freq: 640, sweep: 320, gain: 0.75 },
+        weak: { wave: 'sine', freq: 520, sweep: 260, gain: 0.55 },
+        attack: 0.006,
+        release: 0.26
+      }
+    ];
 
-    // TTS 檢查
-    if(this.features.tts) TTS.checkAndSpeak(now);
+    const PHRASES = [
+      "保持微笑，肩膀放鬆", "核心收緊，用臀部發力", "呼吸要順暢，不要憋氣",
+      "腳步輕盈，像貓一樣落地", "很好，維持這個節奏", "加油，燃燒脂肪",
+      "擺臂自然，視線看向遠方", "膝蓋保持微彎，保護關節",
+      "加油！現在的你，正超越昨天的自己！",
+      "保持身體直立，小步移動，才能維持更久的超慢跑！",
+      "呼吸節奏很重要，試著以鼻子吸氣、嘴巴吐氣，穩定步伐！",
+      "堅持下去！休息可以，但不要放棄！",
+      "超慢跑重在享受過程，不用急於衝刺，放鬆身心！",
+      "別忘了補充水分，少量多次維持身體水分！",
+      "想想你完成之後的成就感，堅持到最後一秒！",
+      "專注在腳尖著地，避免傷膝蓋，穩定膝關節！",
+      "每次都比上一次多跑1分鐘，你就逐漸進步了！",
+      "跑步時保持微笑，有助於舒緩緊張情緒！",
+      "慢慢跑、穩穩跑，不要一次給身體太大負荷！",
+      "你可以的，再撐一下就更接近目標了！",
+      "想像自己跑在美麗的風景中，轉移注意力更輕鬆！",
+      "膝蓋微彎，重心向前移，讓身體輕鬆推進！",
+      "堅持到最後，一定能達成目標！",
+      "集中注意力於呼吸與腳步節奏，雜念自然遠離。",
+      "用音樂陪伴跑步，輕快的節奏能讓心情更愉悅。",
+      "調整上半身姿勢，避免駝背，維持核心穩定。",
+      "每一步都算數，跨出去就離成功更近一步。",
+      "相信自己，你比想像中更有潛力！",
+      "跑步前暖身很重要，能避免運動傷害，讓跑步更輕鬆。",
+      "運動後的放鬆伸展，能讓身體更快恢復。",
+      "日積月累，從一天跑一點開始，你會驚喜於最終成就。",
+      "疲累時想想目標，重新注入動力堅持到最後。",
+      "即使今天只比昨天多跑了幾步，也是向前跨出了一大步！",
+      "記得抬頭挺胸，不要讓肩頸僵硬影響呼吸。",
+      "流汗是身體在排毒，也是努力的勳章！",
+      "適度補充碳水化合物，確保體力充足。",
+      "保持膝蓋與腳尖方向一致，減少關節磨損。",
+      "跑步可以帶來心靈的舒壓，享受每一次呼吸。",
+      "配速不要太快，以能夠輕鬆對話的速度為佳。",
+      "喝足水分，但不要一次喝太多，少量多次最適合。",
+      "跑步同時也是與自己獨處的時刻，享受與內心對話。",
+      "速度不重要，持續跑下去才是關鍵。",
+      "放下比較的心態，只要比昨日的自己更好就足夠。",
+      "多觀察自己的跑步姿勢，並持續微調，跑得更省力。",
+      "跑步過程中，保持下顎微收、視線平視前方。",
+      "裝備不一定要多好，心態堅定才是勝利的關鍵。",
+      "每個汗珠都是努力的見證，堅持就是你的勳章。",
+      "週期性地調整跑步計畫，讓身體適應並逐步突破。",
+      "隨身帶一條小毛巾，擦汗同時也能提醒自己繼續加油！",
+      "當覺得累時，放慢步伐而不是停下來。",
+      "終點並不遙遠，只要你願意不斷前進。",
+      "運動前後可做輕度按摩，舒緩肌肉疲勞。",
+      "想像自己越跑越輕盈，負擔在一點點被甩開。",
+      "堅定意志，跑過疲累的關卡後，會有越來越順的感受。",
+      "人生就像跑步，跌倒了再爬起繼續跑才會成功。",
+      "記錄下每次跑步的里程，看到數字成長也是最佳鼓勵。",
+      "讓身體去感受跑步的律動，找到最自然的節奏。",
+      "每一口呼吸都是活力的象徵，堅持就會看到改變。",
+      "超慢跑適合各種體能狀況，不用擔心起步太難。",
+      "你從來不會後悔努力過，真正要怕的是停滯不前。",
+      "腳步雖慢，但只要不停下來，終能到達目的地。",
+      "曬曬太陽，跑步同時吸收維生素D，對骨骼健康有益。",
+      "跑步時可以聽自己心跳，感受生命的節奏。",
+      "請相信，沒有人能替代你自己邁出的那一步。",
+      "當下次想懶惰時，想想今天流過的汗水。",
+      "跑步能幫助睡眠品質提升，讓你每天都更有精神。",
+      "超慢跑能同時放鬆肌肉與心靈，讓生活更有活力。",
+      "用鼻子吸氣、嘴巴吐氣，能維持更穩定的氧氣供給。",
+      "微調跑姿，比盲目加速更能長久維持運動習慣。",
+      "別用今天的結果，否定所有過去的努力。",
+      "不必把跑步當考試，跑出愉悅才是最好的回饋。",
+      "如果覺得無趣，找個好夥伴一起跑更有動力！",
+      "嘗試改變路線或環境，為跑步增添新鮮感。",
+      "跑步不只是鍛鍊，更是一種磨練心智的方式。",
+      "堅定信念，你能克服所有疲累和困難。",
+      "重視休息，適度的休息能讓你下次更強而有力。",
+      "跑步可以是一種冥想，專注當下感受而不想太多。",
+      "每一步都會累積成為未來的成就，絕不浪費。",
+      "面對逆風，更能訓練你的毅力與耐力。",
+      "先慢下來，再穩住呼吸，你會發現自己能跑得更久。",
+      "日常生活中也要注意姿勢，才能在跑步時保持最佳體態。",
+      "跑步是為了更健康的生活，而不只是完成一個目標。",
+      "帶著笑容出發，跑步也能成為日常生活的快樂時光。",
+      "將困難當磨練，把疲累化成力量，跑出屬於你的道路！",
+      "身體會記得你努力過的每一刻，不會白費！",
+      "慢跑中的專注，能讓你暫時擺脫煩惱，得到心靈的平靜。",
+      "專注腳步下的土地，感受與大地連結的力量。",
+      "跑到目標之前，先跑進自己的內心，聆聽真正的聲音。",
+      "每一次堅持，都在為下一次進步打下基礎。",
+      "讓肌肉與心肺一起成長，跑步會越跑越輕鬆。",
+      "別給自己設限，相信經過努力，你能達成更多！",
+      "跑步能使大腦分泌多巴胺，心情越來越愉悅！",
+      "外面天氣好壞都不是理由，你的意志才是決定因素。",
+      "雙手自然擺動，協調下肢，達到更有效率的跑姿。",
+      "你所付出的汗水，會在你身體狀態上看見回報。",
+      "跑步時也可思考人生，理清未來方向，一舉兩得。",
+      "不再只是想像中的跑者，你已經踏上了這條路！",
+      "把煩惱拋在身後，隨著每一步甩掉不必要的壓力。",
+      "將目標分解成小步驟，跑完一小步就再前進下一步。",
+      "偉大的成就，往往由微小的日常累積而來。",
+      "今後的每一天，只要多跑一分鐘，就能創造新里程。",
+      "慢慢增長距離，但要確保身體能適應，才不易受傷。",
+      "沒有誰能替代你的努力，堅持就是最好的見證。",
+      "試著給自己設定階段性獎勵，讓跑步更有樂趣。",
+      "靠意志撐過去，你會發現自己其實比想像中強大。",
+      "選擇透氣舒適的鞋襪，讓腳丫自由呼吸。",
+      "跑步時不妨專注在沿途風景，讓時間過得更快。",
+      "每一次的練習都是面向成功的墊腳石，加油！",
+      "把握當下，不要讓懶惰和拖延阻礙你的前進。",
+      "跑步的同時，心也跟著跑向更遠的未來。",
+      "沒有天生厲害的跑者，只有不斷進步的人。",
+      "時間有限，把握每一刻跑出健康與自信！",
+      "堅持超慢跑，能鍛鍊身體的同時減少傷害風險。",
+      "養成運動的習慣後，你會愛上這種流汗的感覺。",
+      "汗水是努力的結晶，每一滴都值得驕傲。",
+      "跑步是最簡單的運動，卻能帶來最大改變！"
+    ];
 
-    requestAnimationFrame(this.drawLoop.bind(this));
-  },
+    // 經文內容
+    const TEXTS = {
+      sanzijing: "人之初，性本善。性相近，習相遠。苟不教，性乃遷。教之道，貴以專。昔孟母，擇鄰處。子不學，斷機杼。竇燕山，有義方。教五子，名俱揚。養不教，父之過。教不嚴，師之惰。子不學，非所宜。幼不學，老何為。玉不琢，不成器。人不學，不知義。為人子，方少時。親師友，習禮儀。香九齡，能溫席。孝於親，所當執。融四歲，能讓梨。弟於長，宜先知。首孝悌，次見聞。知某數，識某文。一而十，十而百。百而千，千而萬。三才者，天地人。三光者，日月星。三綱者，君臣義。父子親，夫婦順。",
+      dizigui: "弟子規，聖人訓。首孝悌，次謹信。汎愛眾，而親仁。有餘力，則學文。父母呼，應勿緩。父母命，行勿懶。父母教，須敬聽。父母責，須順承。冬則溫，夏則凊。晨則省，昏則定。出必告，反必面。居有常，業無變。事雖小，勿擅為。苟擅為，子道虧。物雖小，勿私藏。苟私藏，親心傷。親所好，力為具。親所惡，謹為去。身有傷，貽親憂。德有傷，貽親羞。親愛我，孝何難。親憎我，孝方賢。親有過，諫使更。怡吾色，柔吾聲。諫不入，悅復諫。號泣隨，撻無怨。",
+      xinjing: "觀自在菩薩，行深般若波羅蜜多時，照見五蘊皆空，度一切苦厄。舍利子，色不異空，空不異色，色即是空，空即是色，受想行識，亦復如是。舍利子，是諸法空相，不生不滅，不垢不淨，不增不減。是故空中無色，無受想行識，無眼耳鼻舌身意，無色聲香味觸法，無眼界，乃至無意識界，無無明，亦無無明盡，乃至無老死，亦無老死盡。無苦集滅道，無智亦無得。以無所得故，菩提薩埵，依般若波羅蜜多故，心無罣礙。無罣礙故，無有恐怖，遠離顛倒夢想，究竟涅槃。三世諸佛，依般若波羅蜜多故，得阿耨多羅三藐三菩提。故知般若波羅蜜多，是大神咒，是大明咒，是無上咒，是無等等咒，能除一切苦，真實不虛。故說般若波羅蜜多咒，即說咒曰：揭諦揭諦，波羅揭諦，波羅僧揭諦，菩提薩婆訶。",
+      bushengqi: "人生就像一場戲，因為有緣才相聚；相扶到老不容易，是否更該去珍惜？為了小事發脾氣，回頭想來又何必；別人生氣我不氣，氣出病來無人替。我若氣壞誰如意，而且傷神又費力；出門在外少管事，早去早歸少惦記。鄰居親朋不要比，兒孫瑣事隨他去；娃娃降生皆歡喜，人到終年任他去。吃苦享樂在一起，神仙羨慕好伴侶；男女老少多注意，莫生氣啊莫生氣。人生就像一場戲，今世有緣才想聚；相處一處不容易，人人應該去珍惜。世上萬物般般有，哪能件件如我意；為了小事發脾氣，回想起來又何必。他人氣我我不氣，氣出病來無人替；生氣分泌有害物，促人衰老又生疾。看病花錢又受罪，還說氣病治非易；小人量小不讓人，常常氣人氣自己。君子量大同天地，好事壞事包在裡；他人罵我我裝聾，高聲上天低入地。我若錯了真該罵，誠心改正受教育；要是根本沒那事，全當他是罵自己。左親右鄰團結好，家庭和睦樂無比；夫妻互助又親愛，朝夕相伴笑嘻嘻。政通人和想天倫，晚年幸福甜如蜜；鄰里親友不要比，兒孫瑣事隨他去。淡泊名利促健康，文明禮貌爭第一；三國有個周公瑾，因氣喪命中人計。清朝有個閻敬銘，領悟危害不生氣；彌勒就是布袋僧，袒胸大肚能忍氣。笑口常開無憂慮，一切疾病皆消去；不氣不氣真不氣，不氣歌兒記心裡。只要你能做得到，活到百歲不足奇；世上到處都是氣，無氣萬物無生機。人活憑的就是氣，無氣活著啥意義；渾身正氣身體壯，邪氣纏身傷身體。你不生氣氣找你，氣是自己爭來的；人生一生都是氣，若是氣人己先氣。惹人生氣為不義，人要生氣為中計；生氣百害無一利，氣壞別人傷自己。氣出病來自己醫，花錢受罪人諷譏；氣量狹小沒出息，只讓別人竊竊喜。生氣常常傷理智，辦壞事情悔莫及；爭氣損盡己力氣，看你爭氣不爭氣。世人都應曉利弊，歡歡喜喜消消氣；大度能忍天下氣，不氣別人不生氣。你尊我敬多謙虛，但願大家都和氣；頭頂天，腳踏地，人生全在一口氣。切記氣上有三記：嘔氣賭氣發脾氣；嘔氣只能氣自己，賭氣彼此更對立。拍桌打凳發脾氣，有理反到變沒理；人生世上不容易，作踐自己多可惜。生氣生上一分鐘，六十秒鐘沒福氣；生氣生上一小時，六十分鐘冒傻氣。生氣生上一星期，傷了肝來害了脾；人生要想少生氣，幾件事項須牢記。小事小非莫計較，一眼睜來一眼閉；有人出語傷情面，未必全是有惡意。有人處事拂我意，想必有其難唱曲；有人仗勢把人欺，多行不義必自斃。有人誤解我蒙屈，豈有迷霧籠四季；有人背信把我棄，流水落花隨他去。有人優勢超過我，十指哪能一般齊；尺有所短寸有長，不去事事都攀比。人間美景未看全，哪有工夫生閒氣；心態順暢身體好，省下藥錢旅遊去。",
+      licaishijue: "第一訣：財富真諦財富非金銀堆積，乃心靈與物質共榮。貧非無錢，乃無理財之智。知財者，辨資產負債，聚散有道，方得真富。第二訣：知識為基理財之道，始於學識。無知者，縱有萬貫，一朝散盡；有智者，雖貧如洗，積沙成塔。欲富，當習財術，悟金錢法則。第三訣：資產之義資產生財，負債噬財。自住房產，非資產，乃負債；出租生利，方為真資。華車麗服，皆負債，惟能增值者為資產。第四訣：遠離負債積累資產，摒棄負債。負債如鎖，困人於貧；資產如泉，源源生利。擇資避債，財富自增。第五訣：思維之別富人謀資產，窮人求工資。工資乃勞力之酬，難長久；資產乃生財之本，富者志也。工資三成投資產，積年成富。第六訣：開源之術財富之基，在於開源。增收入，拓財路，不拘一業，善用才智。開源有道，財如活水。第七訣：節流之法節流乃理財之要。減無謂之支出，斷浪費之習，量入為出，方保財存。節流如堤，守住財庫。第八訣：儲蓄之功儲蓄乃致富之根。滴水成河，聚少成多，不急於奢，方有餘財。儲蓄如種，靜待收穫。第九訣：投資之智投資乃錢生錢之法。非投機賭博，乃耐心耕耘。擇價值，低買高賣，長持致勝。如巴菲特，數十載守一計，富可敵國。第十訣：風險之衡世無無險之事，智者善控。分散投資，不孤注一擲，設止損線，不貪市場。熊市淡定，牛市清醒，財富長存。第十一訣：財務自由自由非巨富，乃被動收入足支生活。三法得之：一、積資生利；二、簡樸節支；三、復利滾存。十年踐行，自由可期。第十二訣：現金流向金流定貧富。高收入不控，終貧；低收入善管，可富。分三用：生活、投資、進修，財乃可控。第十三訣：多元收入單一收入，如無根樹，易倒。多元財源，方穩如山。股市股息、副業開拓、知識變現，皆可行。第十四訣：價值眼光投資重價值，非逐短利。如農夫種地，靜待秋收，非賭徒下注，急求暴富。眼光長遠，財富自來。第十五訣：心態之要心定財生。貧者懼風險，富者迎機遇。控欲、忍耐、理性應市，持正策，財果自現。第十六訣：金錢之用錢非萬能，無錢難行。財富非終點，乃工具，助自由，增幸福。積財不施，無益；助人濟困，德財雙增。第十七訣：時間之力財富需時，非朝夕功。復利如雪球，越滾越大，耐心如金，急躁損財。長線布局，方見大成。第十八訣：傳承之智財富不獨享，當惠後人。無傳承智，三代必貧。教子孫識資產負債，建長富之家，世代不衰。第十九訣：修身與財理財亦修身。貪者失財，傲者敗家，謙和守正，方得永富。財隨德增，德隨財固。第二十訣：永續之道財富一生之修，日進理財，修正行為，持之以恆，富足自得。誦此二十訣，行此二十道，財隨人生至，圓滿自現",
+      yuansuwujue: "序第1訣：氫輕靈氫乃輕靈首元素，無色無味氣態存，易燃遇氧化成水，宇宙之始最常聞。序第2訣：氦穩貴氦氣穩定貴族身，輕盈難反應於人，充氣浮空聲低沉，星核熔煉出真金。序第3訣：鋰活潑鋰性活潑金屬輕，遇水生氫焰紅明，電池能量藏其中，鹼族之首性不平。序第4訣：鈹剛硬鈹質剛硬毒性存，輕如羽毛色灰昏，合金增韌耐高溫，小心扱之莫輕吞。序第5訣：硼半導硼非金屬半導才，硬如金剛黑褐來，玻璃增強耐熱在，化學穩定性不衰。序第6訣：碳多形碳乃萬物基礎靈，鑽石石墨形態情，生命之源鍵多變，自然造化顯神形。序第7訣：氮氣豊氮氣無色占空多，穩態難反應奈何，氨肥生命不可缺，空氣七成藏其波。序第8訣：氧助燃氧氣助燃生命依，無色無味氣態飛，氧化生鏽能量起，呼吸之本莫忘歸。序第9訣：氟電負氟性兇猛電負強，黃綠毒氣傷人忙，牙膏防腐用其長，鹵族之首最難防。序第10訣：氖閃耀氖氣稀有貴族姿，通電紅光耀眼時，燈管招牌多用之，穩定不化合天資。序第11：鈉軟活鈉質軟亮遇水狂，焰黃切開易氧化，鹽中常見味之王，鹼金屬性最張揚。序第12：鎂白焰鎂燒白焰刺目光，輕質金屬耐用強，合金助燃用處廣，自然礦中隱其芒。序第13：鋁輕用鋁質輕韌耐腐蝕，銀白常見用不息，飛機炊具皆依之，地殼豊富藏其勢。序第14：矽半導矽晶閃耀半導才，地殼次多灰黑來，芯片太陽能之材，科技命脈不可改。序第15：磷發光磷有紅白性不同，白磷自燃發光紅，生命骨骼存其功，小心毒性莫輕碰。序第16：硫臭烈硫黃臭烈易升華，燃燒藍焰氣毒加，橡膠火藥用其法，自然礦藏色明霞。序第17：氯毒綠氯氣黃綠毒性深，殺菌漂白用其能，鹽酸製劑不可輕，鹵族之中性最侵。序第18：氬安定氬氣無色貴族情，空氣一成穩不爭，焊接保護多用行，惰性天然守其形。序第19：鉀紫焰鉀質軟活焰紫紅，遇水爆炸性如風，細胞運作賴其功，鹼族之力顯峯隆。序第20：鈣骨基鈣質銀白骨之基，石灰水泥用不稀，燃燒紅焰性活宜，地殼常見助生機。序第21：鈧稀硬鈧質稀少金屬身，銀白硬韌耐熱真，合金增強用於新，過渡之始鮮人聞。序第22：鈦耐強鈦質輕硬耐腐強，銀灰色澤用處廣，航空醫療皆仰仗，過渡金屬顯剛腸。序第23：釩多彩釩質堅韌色多變，鋼中增硬耐磨顯，催化劑中用其鮮，五彩化合物耀人眼。序第24：鉻光澤鉻質銀亮抗鏽強，鍍層閃耀美名揚，合金鋼硬不可量，焰色綠光性微涼。序第25：錳氧化錳質銀灰易氧化，鋼鐵增韌用其大，電池顏料皆有它，化合多價變化佳。序第26：鐵磁堅鐵質堅硬磁性存，銀灰生鏽易氧化，鋼鐵支撐世人用，地殼常見功勞敦。序第27：鈷藍麗鈷質銀白磁性微，藍色顏料麗人衣，合金耐熱用不稀，催化助燃性更輝。序第28：鎳抗蝕鎳質銀白耐腐真，鍍層合金用處親，電池硬幣皆有身，磁性微弱性溫醇。序第29：銅導佳銅質紅亮導電強，抗腐耐用古今揚，電線管道用處長，化合藍綠色澤光。序第30：鋅防鏽鋅質銀藍易鍍層，防鏽電池用其能，合金增韌不可輕，焰燒綠光性安寧。序第31：鎵融低鎵質銀白熔點低，手溫可化液態奇，半導材料用其宜，稀有金屬性神奇。序第32：鍺半導鍺晶灰白半導才，光電元件用不衰，透鏡晶片皆依賴，稀有元素價不低。序第33：砷毒灰砷質灰黑毒性深，半金屬身性不純，農藥半導用其能，小心扱之莫傷身。序第34：硒光敏硒質灰紅光敏強，光伏電池用其長，玻璃著色亦有方，生命微量不可忘。序第35：溴液紅溴液紅棕毒氣揚，揮發殺菌用處廣，焰試無色鹵族強，小心吸入傷肺傷。序第36：氪穩光氪氣無色貴族身，通電白光耀眼真，燈管標準用其能，惰性穩定少化合。序第37：銣焰紅銣質軟活焰紅明，遇水爆炸性如情，原子鐘中用其精，鹼族金屬少人聽。序第38：鍶焰赤鍶質銀白焰赤紅，煙火信號用其功，骨骼相似鈣類同，鹼土金屬性從容。序第39：釔稀硬釔質銀白稀有身，硬韌耐熱用處新，合金熒光皆有因，過渡金屬少人聞。序第40：鋯耐熱鋯質銀灰耐熱強，核能陶瓷用其長，抗腐硬度不尋常，過渡金屬性安詳。序第41：鈮超導鈮質灰白超導才，合金耐熱用不衰，醫療設備皆依賴，稀有金屬價不低。序第42：鉬增韌鉬質銀灰熔點高，鋼鐵增韌用其豪，催化耐腐性更超，過渡金屬顯英豪。序第43：鎝人造鎝質人造放射身，醫學影像用其真，半衰期短性不穩，元素罕見世難尋。序第44：釕耐磨釕質銀白硬度強，耐磨鍍層用其長，催化劑中顯其芒，貴金屬族性安詳。序第45：銠光貴銠質銀亮貴族輝，抗腐鍍層用不違，催化汽車排氣微，稀有金屬價難追。序第46：鈀吸氫鈀質銀白吸氫強，催化劑中用處廣，淨化氫氣性安詳，貴金屬族功無量。序第47：銀光貴銀質白亮導電優，感光殺菌用不休，飾品貨幣皆依舊，化合黑化需防憂。序第48：鎘毒軟鎘質銀藍軟而毒，電池顏料用其足，焰燒綠光性不酷，小心污染莫輕觸。序第49：銦柔稀銦質銀白柔軟身，半導屏幕用其真，合金焊接性溫醇，稀有金屬少人聞。序第50：錫耐用錫質銀白軟耐蝕，鍍層焊料用不息，青銅時代顯其力，金屬常見性溫易。序第51：銻脆硬銻質灰藍脆而硬，合金增韌用其盛，焰燒藍光性不明，半金屬身毒性輕。序第52：碲光電碲質灰銀光電才，半導材料用不衰，太陽能中顯其材，稀有元素性奇哉。序第53：碘紫氣碘晶紫黑氣味濃，升華殺菌用其功，甲狀腺素賴其隆，鹵族之中性不同。序第79：金永恆金質黃亮永不鏽，延展貴重世人守，貨幣飾品皆依舊，化學穩定性無憂。序第80：汞液銀汞質銀亮液態存，毒性蒸氣傷人魂，溫度計中用其靈，小心扱之莫輕吞。序第82：鉛毒重鉛質灰藍重而軟，防輻電池用其安，毒性傷身需防患，金屬常見性溫緩。",
+      licaishierzhang: "第一章：財富的本質財富者，非僅金銀之多寡，乃心靈與物質之和諧也。貧者非無財，乃無理財之道。知財者，識資產與負債之別，能聚能散，始得財富之真諦。財富之道，首在知識。無知者縱有萬貫家財，亦可倏忽散盡。有智者縱貧如洗，亦能積沙成塔。故欲致富，當學理財之術，悟金錢之法。第二章：資產與負債資產者，可生財也，負債者，奪財也。世人多誤將負債視為資產，終致財散而困。買屋自住，非資產，乃負債；出租獲益，則成資產。名車華服，皆負債也，惟能生息者，方為資產。積累資產，遠離負債，財富當自增。第三章：富人與窮人之別富人思資產，窮人思工資。工資者，勞力之報，然非生財之道；資產者，可日夜生財，乃富者所思也。凡工資所得，當取三成投資資產，非盡以享樂。積年累月，資產自生，財富自來。第四章：理財的基本原則理財之法，有五：一、開源，增收入之道。二、節流，減支出之術。三、儲蓄，積累財富之基。四、投資，錢滾錢之法。五、風險控管，避財散之災。此五者，並行不悖，方能致富。第五章：財務自由之路財務自由者，非巨富，乃收入可支撐生活，而無需勞作也。欲達此境，需三法：一、積累被動收入，資產生財。二、控制開支，簡樸生活。三、長期投資，復利滾存。行此三法，十年之間，財務自由可得。第六章：投資之道投資者，非投機。投機者，如賭博，終為市場所吞噬。投資者，如農夫，耐心耕耘，終得豐收。投資有道，首重價值。低買高賣，非急功近利，乃長期持有。名人如巴菲特，皆持股數十載，富可敵國。故投資者，當忍耐，當睿智，當有長遠眼光。第七章：風險管理世間無無風險之事，惟智者能避災。投資者，當知分散之道，不可孤注一擲。凡投資，當設止損，不貪戀市場。熊市不懼，牛市不狂，方得長久財富。第八章：金錢與人生金錢非萬能，然無錢則萬事難。財富非人生之終點，乃工具，使人得自由，得幸福。惟財富之用，在於助己助人。積財而不施，財亦無用。濟貧助困，則德行與財富並增。第九章：財富的心理學心態決定財富。貧者常畏懼投資，富者則視風險為機會。當學習控制欲望，理性面對市場波動。凡事應有耐心，理財非一朝之功。堅持正確策略，終可見財富成長之果。第十章：現金流管理金錢流向，決定貧富。收入高者，若無管理，終將貧困；收入低者，若善控支出，亦可富足。當分配收入：一、生活必需品。二、投資與儲蓄。三、自我提升。知其比重，則財富可控。第十一章：創造多重收入單一收入者，如斷根之樹，風一吹即倒。故當思考多元收入之道。可行之道：一、投資股市，創造股息收入。二、經營副業，開展新財源。三、知識變現，寫作、課程、演講。收入多元，財富穩固。第十二章：財富傳承財富非僅為己，亦當惠及後人。富者若無傳承之智，則三代貧困。當教育子孫理財之道，教授資產與負債之理，建立長久富足之家。結語：財富永續財富非朝夕之功，乃一生修行。日日精進，學習理財，修正行為，持之以恆，終得富足。誦讀此經，實踐此道，財富將隨汝而來，人生亦將圓滿。"
+    };
 
-  triggerBeat(count) {
-    const isStrong = count % 4 === 0;
-    const ring = document.getElementById('ring');
-    const ripple = document.getElementById('ripple');
-    const beatNum = document.getElementById('beatNum');
+    const TEXT_OPTIONS = [
+      { id: 'none', label: '無經書', desc: '僅顯示節拍引導' },
+      { id: 'sanzijing', label: '三字經', desc: '國學啟蒙經典' },
+      { id: 'dizigui', label: '弟子規', desc: '修身養性篇章' },
+      { id: 'xinjing', label: '心經', desc: '靜心觀想' },
+      { id: 'bushengqi', label: '不生氣', desc: '情緒調和歌訣' },
+      { id: 'licaishijue', label: '理財二十訣', desc: '財商提升小品' },
+      { id: 'yuansuwujue', label: '元素五十六訣', desc: '理科記憶口訣' },
+      { id: 'licaishierzhang', label: '理財十二章經', desc: '長線理財心法' }
+    ];
 
-    // 數字跳動 1, 2, 3, 4
-    const step = (count % 4) + 1;
-    beatNum.textContent = step;
+    const AudioEngine = {
+      ctx: null,
+      nextNoteTime: 0.0,
+      timerID: null,
+      lookahead: 25.0,
+      scheduleAheadTime: 0.1,
+      queue: [],
+      isPlaying: false,
 
-    // 動畫效果
-    ring.style.transform = isStrong ? "scale(1.15)" : "scale(1.05)";
-    ring.style.borderColor = isStrong ? "#fff" : "var(--primary)";
-    
-    // 波紋重置
-    ripple.classList.remove('animate');
-    void ripple.offsetWidth; // Trigger reflow
-    ripple.classList.add('animate');
+      init() {
+        if (!this.ctx) {
+          this.ctx = new (window.AudioContext || window.webkitAudioContext)();
+        }
+        if (this.ctx.state === 'suspended') {
+          this.ctx.resume();
+        }
+      },
 
-    // 恢復
-    setTimeout(() => {
-      ring.style.transform = "scale(1)";
-      ring.style.borderColor = "var(--primary)";
-    }, 100);
+      // 播放高質感的木魚聲/節拍聲
+      playClick(time, beatCount) {
+        const osc = this.ctx.createOscillator();
+        const gain = this.ctx.createGain();
+        const profile = App.getBeatProfile();
+        const isStrong = beatCount % 4 === 0;
+        const tone = (profile && (isStrong ? profile.strong : profile.weak)) || {};
 
-    // 震動
-    if (this.features.vib && navigator.vibrate) {
-      navigator.vibrate(isStrong ? 30 : 10);
-    }
-  }
-};
+        const startFreq = tone.freq || (isStrong ? 1200 : 800);
+        const sweepTarget = tone.sweep !== undefined ? tone.sweep : startFreq * 0.6;
+        const sweepTime = tone.sweepTime || profile?.sweepTime || 0.1;
+        const attack = tone.attack || profile?.attack || 0.005;
+        const release = tone.release || profile?.release || 0.12;
+        const peakGain = tone.gain !== undefined ? tone.gain : (isStrong ? 1 : 0.6);
 
-App.init();
-</script>
+        osc.type = tone.wave || (isStrong ? 'sine' : 'triangle');
+        osc.frequency.setValueAtTime(startFreq, time);
+        if (sweepTarget) {
+          osc.frequency.exponentialRampToValueAtTime(Math.max(sweepTarget, 1), time + sweepTime);
+        }
+
+        gain.gain.setValueAtTime(0, time);
+        gain.gain.linearRampToValueAtTime(peakGain, time + attack);
+        gain.gain.exponentialRampToValueAtTime(0.001, time + release);
+
+        osc.connect(gain);
+        gain.connect(this.ctx.destination);
+
+        osc.start(time);
+        osc.stop(time + release + 0.05);
+      },
+
+      schedule() {
+        while (this.nextNoteTime < this.ctx.currentTime + this.scheduleAheadTime) {
+          // 安排聲音
+          this.playClick(this.nextNoteTime, App.beatCount);
+          // 安排視覺 (推入隊列，由 requestAnimationFrame 處理)
+          App.scheduleVisual(this.nextNoteTime, App.beatCount);
+
+          const secondsPerBeat = 60.0 / App.bpm;
+          this.nextNoteTime += secondsPerBeat;
+          App.beatCount++;
+        }
+        this.timerID = setTimeout(() => this.schedule(), this.lookahead);
+      },
+
+      start() {
+        if (this.isPlaying) return;
+        this.init();
+        this.isPlaying = true;
+        this.nextNoteTime = this.ctx.currentTime + 0.1;
+        App.beatCount = 0;
+        this.schedule();
+      },
+
+      stop() {
+        this.isPlaying = false;
+        clearTimeout(this.timerID);
+      }
+    };
+
+    const TTS = {
+      enabled: true,
+      lastSpeakTime: 0,
+      interval: 60000, // 60秒
+      baseInterval: 60000,
+      minEncInterval: 20000,
+      maxEncInterval: 30000,
+      voices: [],
+      selectedVoice: null,
+
+      init() {
+        const load = () => {
+          this.voices = window.speechSynthesis.getVoices();
+          // 只過濾出中文語音
+          const chineseVoices = this.voices.filter(v => {
+            const lang = (v.lang || '').toLowerCase();
+            return lang.includes('zh') || lang.includes('chinese');
+          });
+
+          // 嘗試從本地存儲載入選擇的語音（必須是中文語音）
+          const savedVoice = localStorage.getItem('selectedVoice');
+          if (savedVoice) {
+            this.selectedVoice = chineseVoices.find(v => v.name === savedVoice);
+          }
+          // 如果沒有保存的語音，使用預設邏輯（只從中文語音中選擇）
+          if (!this.selectedVoice && chineseVoices.length > 0) {
+            const preferred = chineseVoices.find(v => v.name.includes("Google") && v.lang.includes("TW")) ||
+              chineseVoices.find(v => v.lang.includes("TW")) ||
+              chineseVoices.find(v => v.lang.includes("zh"));
+            this.selectedVoice = preferred || chineseVoices[0];
+          }
+          // 更新語音列表UI
+          if (App.updateVoiceList) {
+            App.updateVoiceList();
+          }
+        };
+        window.speechSynthesis.onvoiceschanged = load;
+        load();
+        // 延遲再次載入，確保語音列表完整
+        setTimeout(load, 500);
+        this.refreshInterval();
+      },
+
+      speak(text) {
+        if (!this.enabled || !window.speechSynthesis) return;
+        window.speechSynthesis.cancel(); // 打斷之前的
+        const u = new SpeechSynthesisUtterance(text);
+        if (this.selectedVoice) {
+          u.voice = this.selectedVoice;
+        }
+        u.rate = 1.1; // 稍微快一點，更有活力
+        u.pitch = 1.1;
+        window.speechSynthesis.speak(u);
+      },
+
+      checkAndSpeak(now) {
+        if (now - this.lastSpeakTime > this.interval && App.isRunning) {
+          const msg = PHRASES[Math.floor(Math.random() * PHRASES.length)];
+          this.speak(msg);
+          App.handleEncouragement(msg);
+          this.refreshInterval();
+          this.lastSpeakTime = now;
+        }
+      },
+
+      selectVoice(voice) {
+        this.selectedVoice = voice;
+        localStorage.setItem('selectedVoice', voice.name);
+        if (App.updateVoiceList) {
+          App.updateVoiceList();
+        }
+      },
+
+      refreshInterval() {
+        if (!App || App.currentText) {
+          this.interval = this.baseInterval;
+        } else {
+          const range = this.maxEncInterval - this.minEncInterval;
+          this.interval = this.minEncInterval + Math.random() * (range > 0 ? range : 0);
+        }
+      }
+    };
+
+    const WakeLock = {
+      sentinel: null,
+      async enable() {
+        if ('wakeLock' in navigator) {
+          try { this.sentinel = await navigator.wakeLock.request('screen'); }
+          catch (e) { console.log('WakeLock failed', e); }
+        }
+      },
+      disable() {
+        if (this.sentinel) { this.sentinel.release(); this.sentinel = null; }
+      }
+    };
+
+    const App = {
+      bpm: 180,
+      isRunning: false,
+      beatCount: 0,
+      visualQueue: [],
+      features: { tts: true },
+      currentText: null,
+      textLines: [],
+      currentLineIndex: 0,
+      currentCharIndex: 0,
+      timerEnabled: false,
+      timerDuration: null, // 分鐘
+      timerRemaining: 0, // 秒
+      timerInterval: null,
+      beatProfileId: null,
+      currentEncouragement: PHRASES[Math.floor(Math.random() * PHRASES.length)],
+      placeholderHint: '點擊舞台可切換專注模式',
+
+      init() {
+        this.selectPreset(this.bpm); // Default
+        this.selectText('none'); // 預設無經文
+        try {
+          const savedBeat = localStorage.getItem('beatProfile');
+          if (savedBeat && BEAT_PROFILES.some(p => p.id === savedBeat)) {
+            this.beatProfileId = savedBeat;
+          } else {
+            this.beatProfileId = BEAT_PROFILES[0].id;
+          }
+        } catch (e) {
+          this.beatProfileId = BEAT_PROFILES[0].id;
+        }
+        this.updateBeatButton();
+        TTS.init();
+
+        // Event Listeners
+        document.getElementById('stage').addEventListener('click', () => {
+          if (this.isRunning) this.toggleShowcase(true);
+        });
+
+        // Animation Loop
+        requestAnimationFrame(this.drawLoop.bind(this));
+      },
+
+      showBpmModal() {
+        const modal = document.getElementById('bpmModal');
+        if (!modal) return;
+        this.renderBpmOptions();
+        modal.classList.add('show');
+        const handler = (e) => {
+          if (e.target === modal) this.closeBpmModal();
+        };
+        modal.addEventListener('click', handler, { once: true });
+      },
+
+      closeBpmModal() {
+        const modal = document.getElementById('bpmModal');
+        if (modal) modal.classList.remove('show');
+      },
+
+      renderBpmOptions() {
+        const container = document.getElementById('bpmPresetList');
+        if (!container) return;
+        container.innerHTML = PRESETS.map(p => `
+        <button class="bpm-card" data-bpm="${p.bpm}">
+          <div class="bpm-card-value">${p.bpm}<small>BPM</small></div>
+          <div class="bpm-card-desc">${p.name}</div>
+        </button>
+      `).join('');
+        container.querySelectorAll('.bpm-card').forEach(btn => {
+          btn.addEventListener('click', () => {
+            const bpm = Number(btn.dataset.bpm);
+            this.selectPreset(bpm);
+            this.closeBpmModal();
+          });
+        });
+        this.highlightBpmPreset();
+        this.updateBpmButtonLabel();
+      },
+
+      highlightBpmPreset() {
+        document.querySelectorAll('.bpm-card').forEach(btn => {
+          btn.classList.toggle('active', Number(btn.dataset.bpm) === this.bpm);
+        });
+      },
+
+      updateBpmButtonLabel() {
+        const btnValue = document.getElementById('btnBpmValue');
+        if (btnValue) btnValue.textContent = `${this.bpm} BPM`;
+        const manualValue = document.getElementById('bpmManualValue');
+        if (manualValue) manualValue.textContent = `${this.bpm} BPM`;
+        const btn = document.getElementById('btn-bpm');
+        if (btn) {
+          const hasPreset = PRESETS.some(p => p.bpm === this.bpm);
+          btn.classList.toggle('match-preset', hasPreset);
+        }
+      },
+
+      getBeatProfile() {
+        const fallback = BEAT_PROFILES[0];
+        const current = BEAT_PROFILES.find(p => p.id === this.beatProfileId);
+        return current || fallback;
+      },
+
+      updateBeatButton() {
+        const label = document.getElementById('beatLabel');
+        const btn = document.getElementById('btn-beat');
+        const profile = this.getBeatProfile();
+        if (label) label.textContent = profile.short || profile.label;
+        if (btn) btn.classList.toggle('active', false);
+      },
+
+      showBeatModal() {
+        const modal = document.getElementById('beatModal');
+        if (!modal) return;
+        this.renderBeatList();
+        modal.classList.add('show');
+        const handler = (e) => {
+          if (e.target === modal) this.closeBeatModal();
+        };
+        modal.addEventListener('click', handler, { once: true });
+      },
+
+      closeBeatModal() {
+        const modal = document.getElementById('beatModal');
+        if (modal) modal.classList.remove('show');
+      },
+
+      renderBeatList() {
+        const list = document.getElementById('beatList');
+        if (!list) return;
+        list.innerHTML = '';
+        BEAT_PROFILES.forEach(profile => {
+          const item = document.createElement('div');
+          const isSelected = profile.id === this.beatProfileId;
+          item.className = `voice-item ${isSelected ? 'selected' : ''}`;
+          item.innerHTML = `
+            <div>
+              <div class="voice-item-name">${profile.label}</div>
+              <div class="voice-item-lang">${profile.desc}</div>
+            </div>
+            <div class="voice-item-check">✓</div>
+          `;
+          item.addEventListener('click', () => {
+            this.selectBeatProfile(profile.id);
+            this.closeBeatModal();
+          });
+          list.appendChild(item);
+        });
+      },
+
+      selectBeatProfile(id) {
+        if (!BEAT_PROFILES.some(p => p.id === id)) return;
+        this.beatProfileId = id;
+        try { localStorage.setItem('beatProfile', id); } catch (e) { }
+        this.updateBeatButton();
+        this.renderBeatList();
+      },
+
+      updatePlaceholder() {
+        const placeholder = document.getElementById('placeholderMessage');
+        if (!placeholder) return;
+        if (!this.currentText) {
+          placeholder.innerHTML = `
+            <span class="placeholder-main">${this.currentEncouragement}</span>
+            <span class="placeholder-hint">${this.placeholderHint}</span>
+          `;
+        } else {
+          placeholder.innerHTML = '';
+        }
+      },
+
+      handleEncouragement(message) {
+        if (!message) return;
+        this.currentEncouragement = message;
+        if (!this.currentText) {
+          this.updatePlaceholder();
+        }
+      },
+
+      selectText(textId) {
+        this.currentText = textId === 'none' ? null : textId;
+        const display = document.getElementById('textDisplay');
+        const textBtn = document.getElementById('btn-text');
+        if (textBtn) {
+          textBtn.classList.toggle('active', !!this.currentText);
+        }
+
+        if (!this.currentText || !TEXTS[this.currentText]) {
+          display.classList.add('hidden');
+          this.textLines = [];
+          this.currentLineIndex = 0;
+          this.currentCharIndex = 0;
+          this.renderTextLines();
+          this.updatePlaceholder();
+          if (typeof TTS.refreshInterval === 'function') {
+            TTS.refreshInterval();
+            TTS.lastSpeakTime = Date.now();
+          }
+          return;
+        }
+
+        // 顯示經文並初始化行
+        display.classList.remove('hidden');
+        this.updatePlaceholder();
+        if (typeof TTS.refreshInterval === 'function') {
+          TTS.refreshInterval();
+          TTS.lastSpeakTime = Date.now();
+        }
+        const text = TEXTS[this.currentText];
+
+        // 處理換行：保留原文章的換行，然後按約20字一行分割
+        this.textLines = [];
+        const paragraphs = text.split('\n').filter(p => p.trim());
+
+        paragraphs.forEach(para => {
+          // 如果段落長度小於等於20字，直接作為一行
+          if (para.length <= 20) {
+            this.textLines.push(para);
+          } else {
+            // 按約20字分割，但要考慮標點符號
+            let currentLine = '';
+            for (let i = 0; i < para.length; i++) {
+              currentLine += para[i];
+              // 如果累積到約20字，或者遇到句號、逗號且已超過15字，就換行
+              if (currentLine.length >= 20 ||
+                (currentLine.length >= 15 && /[，。]/.test(para[i]))) {
+                this.textLines.push(currentLine);
+                currentLine = '';
+              }
+            }
+            if (currentLine.trim()) {
+              this.textLines.push(currentLine);
+            }
+          }
+        });
+
+        // 如果沒有換行，整個文本按約20字分割
+        if (this.textLines.length === 0) {
+          let currentLine = '';
+          for (let i = 0; i < text.length; i++) {
+            currentLine += text[i];
+            if (currentLine.length >= 20 ||
+              (currentLine.length >= 15 && /[，。]/.test(text[i]))) {
+              this.textLines.push(currentLine);
+              currentLine = '';
+            }
+          }
+          if (currentLine.trim()) {
+            this.textLines.push(currentLine);
+          }
+        }
+
+        this.currentLineIndex = 0;
+        this.currentCharIndex = 0;
+        this.renderTextLines();
+        this.renderTextList();
+      },
+
+      // 判斷是否為標點符號（節拍跳過）
+      isPunctuation(char) {
+        return /[，。、；：！？「」『』（）【】《》〈〉…—～•‧\s]/.test(char);
+      },
+
+      // 獲取下一個非標點符號的字符索引
+      getNextNonPunctuationIndex(line, startIndex) {
+        for (let i = startIndex; i < line.length; i++) {
+          if (!this.isPunctuation(line[i])) {
+            return i;
+          }
+        }
+        return -1; // 沒有找到
+      },
+
+      renderTextLines() {
+        const container = document.getElementById('textLinesContainer');
+        if (!container || this.textLines.length === 0) return;
+
+        // 計算要顯示的三行：上一行、當前行、下一行
+        const prevIndex = this.currentLineIndex > 0 ? this.currentLineIndex - 1 : null;
+        const currentIndex = this.currentLineIndex;
+        const nextIndex = this.currentLineIndex < this.textLines.length - 1 ? this.currentLineIndex + 1 : null;
+
+        let html = '';
+
+        // 上一行（灰色）
+        if (prevIndex !== null) {
+          const prevLine = this.textLines[prevIndex];
+          html += `<div class="text-line prev">${this.renderLineChars(prevLine, -1)}</div>`;
+        } else {
+          html += `<div class="text-line" style="opacity:0"></div>`;
+        }
+
+        // 當前行（白色，當前字符高亮）
+        const currentLine = this.textLines[currentIndex];
+        html += `<div class="text-line current">${this.renderLineChars(currentLine, this.currentCharIndex)}</div>`;
+
+        // 下一行（灰色）
+        if (nextIndex !== null) {
+          const nextLine = this.textLines[nextIndex];
+          html += `<div class="text-line next">${this.renderLineChars(nextLine, -1)}</div>`;
+        } else {
+          html += `<div class="text-line" style="opacity:0"></div>`;
+        }
+
+        container.innerHTML = html;
+      },
+
+      renderLineChars(line, highlightIndex) {
+        if (!line) return '';
+        let html = '';
+        for (let i = 0; i < line.length; i++) {
+          const char = line[i];
+          // highlightIndex 是當前要高亮的字符索引
+          const isHighlight = (highlightIndex >= 0 && i === highlightIndex);
+          html += `<span class="text-char ${isHighlight ? 'highlight' : ''}">${char === ' ' ? '&nbsp;' : char}</span>`;
+        }
+        return html;
+      },
+
+      selectPreset(bpm) {
+        this.bpm = bpm;
+        this.highlightBpmPreset();
+        this.updateBpmButtonLabel();
+
+        // 更新主題色
+        const p = PRESETS.find(x => x.bpm === bpm) || PRESETS[3];
+        document.documentElement.style.setProperty('--primary', p.color);
+        document.documentElement.style.setProperty('--primary-glow', p.glow);
+
+        if (this.isRunning) TTS.speak(`調整為 ${bpm}`);
+      },
+
+      adjustBpm(delta) {
+        let newBpm = this.bpm + delta;
+        if (newBpm < 30) newBpm = 30;
+        if (newBpm > 300) newBpm = 300;
+
+        const match = PRESETS.find(p => p.bpm === newBpm);
+        if (match) {
+          this.selectPreset(newBpm);
+        } else {
+          this.bpm = newBpm;
+          this.highlightBpmPreset();
+          this.updateBpmButtonLabel();
+        }
+      },
+
+      toggle() {
+        if (this.isRunning) {
+          this.pause();
+        } else {
+          AudioEngine.start();
+          WakeLock.enable();
+          this.isRunning = true;
+          document.getElementById('btnText').textContent = "暫停";
+          document.getElementById('btnStart').style.background = "#fff";
+          document.getElementById('btnStart').style.color = "#000";
+          document.getElementById('btnStop').classList.add('visible');
+          TTS.lastSpeakTime = Date.now();
+          TTS.speak("開始運動，請保持呼吸節奏");
+          // 如果計時器已啟用，開始倒數
+          if (this.timerEnabled && this.timerRemaining > 0) {
+            this.startTimerCountdown();
+          }
+        }
+      },
+
+      pause() {
+        AudioEngine.stop();
+        this.isRunning = false;
+        document.getElementById('btnText').textContent = "繼續";
+        document.getElementById('btnStart').style.background = "var(--primary)";
+        // 計時器會自動暫停（因為 isRunning 為 false）
+      },
+
+      stop() {
+        this.pause();
+        document.getElementById('btnText').textContent = "開始跑步";
+        document.getElementById('btnStop').classList.remove('visible');
+        document.getElementById('beatNum').textContent = "Go";
+        this.beatCount = 0;
+        this.currentLineIndex = 0;
+        this.currentCharIndex = 0;
+        // 重置經文顯示
+        if (this.currentText) {
+          this.renderTextLines();
+        }
+        WakeLock.disable();
+        TTS.speak("運動結束，你越來越棒了，繼續加油喔");
+        this.toggleShowcase(false);
+      },
+
+      toggleFeature(key) {
+        if (key !== 'tts') return;
+        this.features[key] = !this.features[key];
+        const btn = document.getElementById('btn-tts');
+        btn.classList.toggle('active', this.features[key]);
+        TTS.enabled = this.features[key];
+      },
+
+      showVoiceModal() {
+        const modal = document.getElementById('voiceModal');
+        modal.classList.add('show');
+        this.updateVoiceList();
+        // 點擊背景關閉
+        modal.addEventListener('click', (e) => {
+          if (e.target === modal) {
+            this.closeVoiceModal();
+          }
+        });
+      },
+
+      closeVoiceModal() {
+        const modal = document.getElementById('voiceModal');
+        modal.classList.remove('show');
+      },
+
+      showTextModal() {
+        const modal = document.getElementById('textModal');
+        if (!modal) return;
+        this.renderTextList();
+        modal.classList.add('show');
+        const handler = (e) => {
+          if (e.target === modal) {
+            this.closeTextModal();
+          }
+        };
+        modal.addEventListener('click', handler, { once: true });
+      },
+
+      closeTextModal() {
+        const modal = document.getElementById('textModal');
+        if (modal) modal.classList.remove('show');
+      },
+
+      renderTextList() {
+        const list = document.getElementById('textList');
+        if (!list) return;
+        const current = this.currentText || 'none';
+        list.innerHTML = '';
+
+        TEXT_OPTIONS.forEach(opt => {
+          const item = document.createElement('div');
+          item.className = `voice-item ${current === opt.id ? 'selected' : ''}`;
+          item.innerHTML = `
+        <div>
+          <div class="voice-item-name">${opt.label}</div>
+          <div class="voice-item-lang">${opt.desc || ''}</div>
+        </div>
+        <div class="voice-item-check">✓</div>
+      `;
+          item.addEventListener('click', () => {
+            this.selectText(opt.id);
+            this.closeTextModal();
+          });
+          list.appendChild(item);
+        });
+      },
+
+      updateVoiceList() {
+        const list = document.getElementById('voiceList');
+        if (!list) return;
+
+        list.innerHTML = '';
+
+        // 在最上方添加「關閉語音」選項
+        const disableItem = document.createElement('div');
+        const isDisabled = !TTS.enabled;
+        disableItem.className = `voice-item ${isDisabled ? 'selected' : ''}`;
+        disableItem.innerHTML = `
+      <div>
+        <div class="voice-item-name">關閉語音</div>
+        <div class="voice-item-lang">停用語音播報功能</div>
+      </div>
+      <div class="voice-item-check">✓</div>
+    `;
+        disableItem.addEventListener('click', () => {
+          TTS.enabled = false;
+          App.features.tts = false;
+          const btn = document.getElementById('btn-tts');
+          btn.classList.remove('active');
+          this.closeVoiceModal();
+        });
+        list.appendChild(disableItem);
+
+        if (!TTS.voices.length) return;
+
+        // 只過濾出中文語音
+        const chineseVoices = TTS.voices.filter(voice => {
+          const lang = (voice.lang || '').toLowerCase();
+          return lang.includes('zh') || lang.includes('chinese');
+        });
+
+        if (chineseVoices.length === 0) {
+          const noVoiceItem = document.createElement('div');
+          noVoiceItem.className = 'voice-item';
+          noVoiceItem.innerHTML = `
+        <div>
+          <div class="voice-item-name">暫無中文語音</div>
+          <div class="voice-item-lang">系統未安裝中文語音包</div>
+        </div>
+      `;
+          list.appendChild(noVoiceItem);
+          return;
+        }
+
+        // 按語言代碼分組
+        const grouped = {};
+        chineseVoices.forEach(voice => {
+          const lang = voice.lang || 'zh';
+          if (!grouped[lang]) grouped[lang] = [];
+          grouped[lang].push(voice);
+        });
+
+        // 按語言代碼排序顯示
+        Object.keys(grouped).sort().forEach(lang => {
+          grouped[lang].forEach(voice => {
+            const isSelected = TTS.enabled && TTS.selectedVoice && voice.name === TTS.selectedVoice.name;
+            const item = document.createElement('div');
+            item.className = `voice-item ${isSelected ? 'selected' : ''}`;
+            item.dataset.voiceName = voice.name;
+
+            // 顯示友好的語言名稱
+            let langName = lang;
+            if (lang.includes('TW') || lang.includes('tw')) langName = '台灣中文';
+            else if (lang.includes('CN') || lang.includes('cn') || lang.includes('Hans')) langName = '簡體中文';
+            else if (lang.includes('HK') || lang.includes('hk')) langName = '香港中文';
+            else if (lang.includes('Hant')) langName = '繁體中文';
+            else if (lang.includes('zh')) langName = '中文';
+
+            item.innerHTML = `
+          <div>
+            <div class="voice-item-name">${voice.name}</div>
+            <div class="voice-item-lang">${langName} ${voice.default ? '(預設)' : ''}</div>
+          </div>
+          <div class="voice-item-check">✓</div>
+        `;
+            item.addEventListener('click', () => {
+              this.selectVoice(voice.name);
+            });
+            list.appendChild(item);
+          });
+        });
+      },
+
+      selectVoice(voiceName) {
+        const voice = TTS.voices.find(v => v.name === voiceName);
+        if (voice) {
+          TTS.selectVoice(voice);
+          // 啟用語音功能
+          TTS.enabled = true;
+          App.features.tts = true;
+          const btn = document.getElementById('btn-tts');
+          btn.classList.add('active');
+          // 測試播放
+          TTS.speak('語音測試');
+          this.closeVoiceModal();
+        }
+      },
+
+      toggleShowcase(active) {
+        if (active) document.body.classList.add('showcase');
+        else document.body.classList.remove('showcase');
+      },
+
+      scheduleVisual(time, count) {
+        this.visualQueue.push({ time, count });
+      },
+
+      drawLoop() {
+        const drawTime = AudioEngine.ctx ? AudioEngine.ctx.currentTime : 0;
+        const now = Date.now();
+
+        // 處理視覺隊列
+        while (this.visualQueue.length && this.visualQueue[0].time <= drawTime) {
+          const event = this.visualQueue.shift();
+          this.triggerBeat(event.count);
+        }
+
+        // TTS 檢查
+        if (this.features.tts) TTS.checkAndSpeak(now);
+
+        requestAnimationFrame(this.drawLoop.bind(this));
+      },
+
+      triggerBeat(count) {
+        const isStrong = count % 4 === 0;
+        const ring = document.getElementById('ring');
+        const ripple = document.getElementById('ripple');
+        const beatNum = document.getElementById('beatNum');
+
+        // 數字跳動 1, 2, 3, 4
+        const step = (count % 4) + 1;
+        beatNum.textContent = step;
+
+        // 動畫效果
+        ring.style.transform = isStrong ? "scale(1.15)" : "scale(1.05)";
+        ring.style.borderColor = isStrong ? "#fff" : "var(--primary)";
+
+        // 波紋重置
+        ripple.classList.remove('animate');
+        void ripple.offsetWidth; // Trigger reflow
+        ripple.classList.add('animate');
+
+        // 恢復
+        setTimeout(() => {
+          ring.style.transform = "scale(1)";
+          ring.style.borderColor = "var(--primary)";
+        }, 100);
+
+        // 經文顯示邏輯
+        if (this.currentText && this.textLines.length > 0 && this.isRunning) {
+          this.updateTextDisplay();
+        }
+      },
+
+      updateTextDisplay() {
+        if (this.currentLineIndex >= this.textLines.length) {
+          // 讀完後重新開始
+          this.currentLineIndex = 0;
+          this.currentCharIndex = 0;
+          this.renderTextLines();
+          return;
+        }
+
+        const currentLine = this.textLines[this.currentLineIndex];
+
+        // 如果 currentCharIndex 已經超出當前行長度，換到下一行
+        if (this.currentCharIndex >= currentLine.length) {
+          this.currentLineIndex++;
+          this.currentCharIndex = 0;
+          this.renderTextLines();
+          return;
+        }
+
+        // 從當前位置開始，找到下一個非標點符號的字符索引
+        const nextCharIndex = this.getNextNonPunctuationIndex(currentLine, this.currentCharIndex);
+
+        if (nextCharIndex === -1) {
+          // 當前行的所有非標點字符都已讀完，換到下一行
+          this.currentLineIndex++;
+          this.currentCharIndex = 0;
+        } else {
+          // 設置為下一個非標點字符的索引（渲染時會高亮這個字符）
+          this.currentCharIndex = nextCharIndex;
+        }
+
+        // 重新渲染三行（高亮 currentCharIndex 位置的字符）
+        this.renderTextLines();
+
+        // 渲染後，移動到下一個位置，準備下次查找
+        this.currentCharIndex++;
+      },
+
+      // 計時器相關方法
+      showTimerModal() {
+        const modal = document.getElementById('timerModal');
+        modal.classList.add('show');
+        this.updateTimerList();
+        // 點擊背景關閉
+        modal.addEventListener('click', (e) => {
+          if (e.target === modal) {
+            this.closeTimerModal();
+          }
+        });
+      },
+
+      closeTimerModal() {
+        const modal = document.getElementById('timerModal');
+        modal.classList.remove('show');
+      },
+
+      updateTimerList() {
+        const list = document.getElementById('timerList');
+        if (!list) return;
+
+        list.innerHTML = '';
+
+        // 在最上方添加「關閉計時器」選項
+        const disableItem = document.createElement('div');
+        const isDisabled = !this.timerEnabled;
+        disableItem.className = `voice-item ${isDisabled ? 'selected' : ''}`;
+        disableItem.innerHTML = `
+      <div>
+        <div class="voice-item-name">關閉計時器</div>
+        <div class="voice-item-lang">停用計時器功能</div>
+      </div>
+      <div class="voice-item-check">✓</div>
+    `;
+        disableItem.addEventListener('click', () => {
+          this.stopTimer();
+          this.closeTimerModal();
+        });
+        list.appendChild(disableItem);
+
+        // 時間選項：5、10、15、20、25、30、40、50、60、90、120 分鐘
+        const timeOptions = [5, 10, 15, 20, 25, 30, 40, 50, 60, 90, 120];
+        timeOptions.forEach(minutes => {
+          const isSelected = this.timerEnabled && this.timerDuration === minutes;
+          const item = document.createElement('div');
+          item.className = `voice-item ${isSelected ? 'selected' : ''}`;
+          item.innerHTML = `
+        <div>
+          <div class="voice-item-name">${minutes} 分鐘</div>
+          <div class="voice-item-lang">${minutes === 60 ? '1 小時' : minutes === 90 ? '1.5 小時' : minutes === 120 ? '2 小時' : ''}</div>
+        </div>
+        <div class="voice-item-check">✓</div>
+      `;
+          item.addEventListener('click', () => {
+            this.startTimer(minutes);
+            this.closeTimerModal();
+          });
+          list.appendChild(item);
+        });
+      },
+
+      startTimer(minutes) {
+        this.timerEnabled = true;
+        this.timerDuration = minutes;
+        this.timerRemaining = minutes * 60; // 轉換為秒
+
+        const btn = document.getElementById('btn-timer');
+        btn.classList.add('active');
+
+        this.updateTimerDisplay();
+        this.startTimerCountdown();
+      },
+
+      stopTimer() {
+        this.timerEnabled = false;
+        this.timerDuration = null;
+        this.timerRemaining = 0;
+
+        if (this.timerInterval) {
+          clearInterval(this.timerInterval);
+          this.timerInterval = null;
+        }
+
+        const btn = document.getElementById('btn-timer');
+        btn.classList.remove('active');
+
+        const display = document.getElementById('timerDisplay');
+        display.textContent = '';
+        display.classList.remove('active');
+      },
+
+      startTimerCountdown() {
+        if (this.timerInterval) {
+          clearInterval(this.timerInterval);
+        }
+
+        this.timerInterval = setInterval(() => {
+          if (!this.isRunning) {
+            // 如果沒有在跑步，計時器暫停
+            return;
+          }
+
+          if (this.timerRemaining > 0) {
+            this.timerRemaining--;
+            this.updateTimerDisplay();
+          } else {
+            // 計時器結束
+            this.onTimerComplete();
+          }
+        }, 1000);
+      },
+
+      updateTimerDisplay() {
+        const display = document.getElementById('timerDisplay');
+        if (!display) return;
+
+        if (!this.timerEnabled || this.timerRemaining <= 0) {
+          display.textContent = '';
+          display.classList.remove('active');
+          return;
+        }
+
+        const minutes = Math.floor(this.timerRemaining / 60);
+        const seconds = this.timerRemaining % 60;
+        display.textContent = `剩餘時間：${minutes} 分 ${seconds} 秒`;
+        display.classList.add('active');
+
+        // 如果剩餘時間少於1分鐘，顯示警告顏色
+        if (this.timerRemaining < 60) {
+          display.style.color = '#ff6b6b';
+        } else {
+          display.style.color = 'var(--primary)';
+        }
+      },
+
+      onTimerComplete() {
+        this.stopTimer();
+        // 停止跑步
+        if (this.isRunning) {
+          this.stop();
+        }
+        // 播放提示音或語音
+        if (TTS.enabled) {
+          TTS.speak('計時結束，運動完成！');
+        }
+        // 可以添加震動或其他提示
+        if (navigator.vibrate) {
+          navigator.vibrate([200, 100, 200, 100, 200]);
+        }
+      }
+    };
+
+    App.init();
+  </script>
 </body>
+
 </html>
